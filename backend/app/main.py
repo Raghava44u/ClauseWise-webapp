@@ -27,10 +27,18 @@ logger = logging.getLogger("clausewise")
 async def lifespan(app: FastAPI):
     logger.info("Initializing ClauseWise backend services...")
     # Initialize database tables
-    await init_db()
+    try:
+        await init_db()
+        logger.info("Database initialized successfully.")
+    except Exception as db_err:
+        logger.warning(f"Database initialization warning (will retry on query): {db_err}")
+
     # Ensure uploads directory exists
-    _ = settings.upload_path
-    logger.info(f"ClauseWise storage initialized at: {settings.upload_path}")
+    try:
+        _ = settings.upload_path
+        logger.info(f"ClauseWise storage initialized at: {settings.upload_path}")
+    except Exception as st_err:
+        logger.warning(f"Storage directory initialization warning: {st_err}")
     
     # Pre-check OCR readiness (non-blocking)
     if settings.ENABLE_OCR:

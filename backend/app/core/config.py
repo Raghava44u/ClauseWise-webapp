@@ -44,8 +44,13 @@ class Settings(BaseSettings):
 
     @property
     def upload_path(self) -> Path:
-        p = Path(self.UPLOAD_DIR)
-        p.mkdir(parents=True, exist_ok=True)
-        return p
+        try:
+            p = Path(self.UPLOAD_DIR)
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+        except Exception:
+            fallback = Path("./uploads")
+            fallback.mkdir(parents=True, exist_ok=True)
+            return fallback
 
 settings = Settings()
