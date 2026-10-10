@@ -1,196 +1,183 @@
 # ClauseWise — Enterprise Legal Contract Intelligence
 
-ClauseWise is a legal contract analysis web application engineered to parse, index, cross-examine, and verify complex legal agreements up to 150+ pages. Built with Next.js, FastAPI, Grok (xAI API), and PaddleOCR, ClauseWise features **deterministic server-side quotation verification**, deep text-layer citation navigation, multi-contract cross-examination, clause-level version comparison with numeric change detection, and **Part C Option 2: Autonomous Agentic Document Research**.
+ClauseWise is a legal contract analysis web application engineered to parse, index, cross-examine, and verify complex legal agreements up to 150+ pages. Built with Next.js, FastAPI, Google Gemini / Grok (xAI API), and PaddleOCR, ClauseWise features **deterministic server-side quotation verification**, deep text-layer citation navigation with zero-download inline PDF rendering, dynamic document-tailored inquiries, multi-contract cross-examination, clause-level version comparison with numeric change detection, and **Part C Option 2: Autonomous Agentic Document Research**.
 
 ---
 
-## 🚀 Key Features
+## 📸 Screenshots of Main Screens
 
-### 1. Document Upload & Multimodal Extraction (Part A)
-- **Supported Formats:** PDF (`.pdf`) and Microsoft Word (`.docx`).
-- **Scanned PDF Handling:** Automatic detection of image-based/scanned pages with PaddleOCR fallback on CPU, extracting text lines and normalized bounding polygon coordinates.
-- **Contract Library:** Fast document browsing, file metadata (file size, page count, OCR status), and safe cascade deletion.
+### 1. Contract Upload & Library Management
+*Upload PDF and DOCX contracts, view processing status with real-time animated feedback, inspect indexed metadata, and manage your contract library.*
 
-### 2. Evidence-Grounded Streaming AI Chat (Part A)
-- **Official Grok Integration:** Powered by Grok via the xAI API (`https://api.x.ai/v1`) with Server-Sent Events (SSE) streaming.
-- **Interruption Support:** User can halt generation mid-sentence via `AbortController`, preserving partial output in conversation history.
-- **Multi-Turn Context:** Conversation sessions are saved per contract and reopenable at any time.
-
-### 3. Deterministic Quotation Verification (Assignment Core)
-- **Zero-Trust AI Design:** The server independently verifies every candidate quotation against the verbatim stored contract text before displaying it.
-- **Fuzzy-Normalized Matching:** Handles whitespace splits, soft hyphens, PDF line breaks, and typographic quotes (`“”` vs `""`) with a bidirectional character offset map.
-- **Strict Hallucination Rejection:** Modified or fabricated quotations are rejected and marked unverified.
-
-### 4. Deep Citation Navigation & Source Highlighting (Part B)
-- **1-Click Jump:** Clicking any verified quotation card automatically switches to the Document Viewer, navigates to the cited page, scrolls to the passage, and pulses with a gold citation highlight (`citation-target-highlight`).
-- **Structured & Native Preview:** Dual viewer modes supporting structured clause segments and native PDF preview.
-
-### 5. Multi-Document Cross-Examination (Part B)
-- **Cross-Contract Synthesis:** Select multiple uploaded agreements to query shared provisions (e.g. *"Compare the limitation of liability provisions across these supplier agreements"*).
-- **Origin Attribution:** Each retrieved quote attributes the exact originating contract and page number with separate verification per document.
-
-### 6. Contract Version Comparison (Part B)
-- **Structural Clause Alignment:** Aligns contracts into clauses and detects Added, Removed, Modified, and Unchanged clauses.
-- **Numeric Shift Detection:** Detects changes in currency caps, percentages, and notice periods (e.g., `AED 100,000` -> `AED 1,000,000`).
-- **Significance Scoring:** Automatically ranks changes as Critical, High, Medium, or Low with plain-language legal summaries and dual citations.
-
-### 7. Part C Option 2: Autonomous Agentic Document Research
-- **Multi-Round Tool Calling:** The model actively calls inspection tools:
-  - `search_document(query, document_id?)`
-  - `get_section(section_identifier, document_id?)`
-  - `list_clauses(document_id?)`
-  - `get_document_overview(document_id?)`
-- **Real-Time Execution Console:** Streams live tool calls, parsed JSON arguments, and retrieved excerpts to an interactive UI terminal.
-- **Safety Guardrails:** Enforces a hard cap of 6 execution rounds and protects against malformed parameters.
+![Contract Upload and Library](docs/screenshots/01_upload_and_library.png)
 
 ---
 
-## 🛠 Technology Stack
+### 2. Evidence-Grounded Chat with Deterministic Verified Quotations
+*Ask questions about contracts with streaming responses backed by programmatically verified verbatim source quotes and dynamic inquiries generated specifically from the uploaded document.*
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | Next.js 14 (App Router), React 18, TypeScript (Strict), Tailwind CSS, Lucide Icons |
-| **Backend** | Python 3.11, FastAPI, Uvicorn, SQLAlchemy (AsyncIO), Alembic |
-| **AI Provider** | Grok via xAI API (`https://api.x.ai/v1`) |
-| **Document Processing** | PyMuPDF (`fitz`), `python-docx` |
-| **OCR Engine** | PaddleOCR 2.9.1 (CPU mode) |
-| **Retrieval Engine** | `BM25Plus` Lexical Search with clause-aware chunking |
-| **Database** | SQLite + `aiosqlite` (local) / PostgreSQL + `asyncpg` (production) |
-| **Deployment** | Render Blueprint (`render.yaml`), Docker containerization |
+![Evidence-Grounded Chat with Verified Quotes](docs/screenshots/02_chat_with_verified_quotes.png)
 
 ---
 
-## 📐 Architecture
+### 3. Deep Citation Navigation & Original Document Highlighting
+*Click any extracted clause or citation card to immediately jump to the source passage in the side-by-side Split View, highlighting the exact text in a glowing green bounding box on the original document page with an interactive character index pubblebox.*
 
-```mermaid
-flowchart TD
-    User([Legal Counsel])
-    NextJS[Next.js 14 Frontend :3000]
-    FastAPI[FastAPI Backend :8000]
-    Storage[(Persistent Uploads)]
-    DB[(PostgreSQL / SQLite)]
-    BM25[BM25Plus Lexical Engine]
-    Verifier[Deterministic Quote Verifier]
-    PaddleOCR[PaddleOCR Engine CPU]
-    Grok[Grok AI via xAI API]
-
-    User <--> NextJS
-    NextJS <-- SSE / REST --> FastAPI
-    FastAPI --> Storage
-    FastAPI <--> DB
-    FastAPI <--> PaddleOCR
-    FastAPI <--> BM25
-    FastAPI <--> Verifier
-    FastAPI <-- SSE Streaming & Tools --> Grok
-```
+![Citation Navigation & Original Document Highlighting](docs/screenshots/03_citation_and_green_box_highlighting.png)
 
 ---
 
-## ⚙️ Environment Variables
+### 4. Clause-by-Clause Contract Version Comparison
+*Compare baseline and amended contract versions side-by-side with automatic alignment, change classification (Added, Removed, Modified, Unchanged), numeric shift detection (currency caps, notice periods), and legal significance ranking.*
 
-Copy `.env.example` to `.env.local` for local development:
-
-```dotenv
-AI_PROVIDER=xai
-AI_API_KEY=your_xai_grok_api_key_here
-AI_BASE_URL=https://api.x.ai/v1
-AI_MODEL=grok-2-latest
-
-DATABASE_URL=sqlite+aiosqlite:///./clausewise.db
-
-FRONTEND_URL=http://localhost:3000
-BACKEND_URL=http://localhost:8000
-ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-
-MAX_AGENT_ROUNDS=6
-MAX_UPLOAD_SIZE_MB=50
-MAX_OCR_PAGES=200
-
-STORAGE_BACKEND=local
-UPLOAD_DIR=./uploads
-
-ENVIRONMENT=development
-ENABLE_OCR=true
-```
-
-> **Security Note:** The Grok API key and database connection strings are strictly kept server-side and never exposed to the client.
+![Contract Version Comparison](docs/screenshots/04_document_comparison.png)
 
 ---
 
-## 💻 Local Setup & Execution
+## 🚀 What the App Does
+
+1. **Document Upload & Multimodal Extraction (Part A)**:
+   - Accepts both `.pdf` and `.docx` agreements up to 50MB.
+   - Automatically detects image-based or scanned pages, with PaddleOCR fallback extracting text lines and normalized bounding polygon coordinates.
+   - Renders original PDF pages inline as high-resolution PNG image streams with zero browser download interception.
+
+2. **Deterministic Server-Side Quote Verification (Core)**:
+   - **Zero-Trust Verification**: The server independently verifies every candidate quotation against the true stored text of the contract before displaying it as verified.
+   - **Fuzzy-Normalized Matching**: Normalizes whitespace splits, soft hyphens, PDF line breaks, and typographic quotes (`“”` vs `""`) with a bidirectional character offset map.
+   - **Strict Rejection**: Modified, paraphrased, or hallucinated quotations are rejected and marked unverified.
+
+3. **Dynamic Tailored Inquiries (No Guessed Questions)**:
+   - Generates 4 dynamic questions derived directly from the uploaded document's actual contents, roles, entities, and clauses (resumes get operations & skill inquiries; NDAs get confidential information & survival term inquiries).
+
+4. **Interactive Document Viewer & Visual Cues**:
+   - Side-by-side **Split View** displaying Extracted Text on the left and the Original Contract on the right.
+   - Clicking an extracted clause highlights it in a glowing **green box** with an interactive pubblebox displaying character offsets `[start..end]`.
+   - Top-navigation **Document Viewer** tab features a smoothly **rotating rainbow border** animation upon document processing completion to clearly signal to the user that the contract is ready for review.
+
+5. **Multi-Document Cross-Examination (Part B)**:
+   - Select multiple agreements in the library to run cross-contract queries (e.g., *"Compare the liability caps between both vendors"*).
+   - Quotes are individually attributed and verified against each specific originating document.
+
+6. **Contract Version Comparison & Numeric Shift Detection (Part B)**:
+   - Structural clause alignment detects substantive additions, removals, and modifications.
+   - Flags critical numeric shifts (e.g., liability cap changing from `$100,000` to `$1,000,000` or notice period changing from 30 to 60 days).
+   - Generates 1-click amendment comparison demos for instant evaluation.
+
+7. **Autonomous Agentic Document Research (Part C Option 2)**:
+   - Real-world multi-round tool-calling agent using 4 specialized tools:
+     - `search_document(query, document_id?)`
+     - `get_section(section_identifier, document_id?)`
+     - `list_clauses(document_id?)`
+     - `get_document_overview(document_id?)`
+   - Real-time execution console displaying live tool calls, arguments, and intermediate findings.
+   - Guardrails enforcing a strict 6-round execution ceiling and robust parameter validation.
+
+---
+
+## 📋 What is Finished and What is Not
+
+### ✅ What is Finished
+- **Part A: Core Document Q&A Application**:
+  - [x] PDF and DOCX upload pipeline with validation and error reporting.
+  - [x] Multimodal text extraction with PyMuPDF, `python-docx`, and PaddleOCR fallback.
+  - [x] Chunking and character offset mapping preserving section structure.
+  - [x] Streaming AI chat using Gemini / Grok (xAI API) with interruption support.
+  - [x] Deterministic server-side quotation verification with bidirectional index mapping.
+  - [x] Distinction between "no relevant evidence found" and "clause is absent".
+  - [x] Persistent chat history and document library management.
+
+- **Part B: Extended Features**:
+  - [x] Deep citation navigation jumping directly to cited page and highlighted text.
+  - [x] Side-by-side Split View with green bounding box and pubblebox character offsets.
+  - [x] Multi-document question answering across multiple selected contracts.
+  - [x] Automated contract version comparison with numeric change detection and significance scoring.
+  - [x] Rotating rainbow margin indicator on Document Viewer tab when processing completes.
+  - [x] Dynamic, document-tailored suggested questions generated from uploaded content.
+
+- **Part C: Advanced Capability (Option 2 Selected)**:
+  - [x] Autonomous agentic research with 4 model-callable tools.
+  - [x] Live SSE streaming execution console showing thoughts, tool calls, and outputs.
+  - [x] Safety guardrails (6-round limit, cycle prevention, argument normalization).
+  - [x] Server-side quotation verification applied to the final synthesized answer.
+
+- **Deployment & Testing**:
+  - [x] 26/26 backend unit and integration tests passing (`pytest`).
+  - [x] Next.js production build verified (`next build`).
+  - [x] Backend deployed live on Render: `https://clausewise-backend-1heh.onrender.com`.
+
+### ⏳ What is Not Finished / Documented Scope
+- **User Authentication**: Deliberately omitted per assignment instructions for a single-user evaluation tool. The system is intended for synthetic or non-confidential contracts.
+- **Part C Option 1 (DOCX Redline Generator)**: Not implemented because **Option 2 (Autonomous Agentic Document Research)** was chosen as the advanced capability.
+- **Dense Vector Search**: The application currently uses `BM25Plus` lexical retrieval with clause-level indexing. Semantic vector search (e.g. Qdrant/pgvector) is documented as a future enhancement.
+
+---
+
+## 💻 How to Run Locally
 
 ### 1. Prerequisites
-- Python 3.11 installed (`python --version` or `py -3.11`)
-- Node.js v18+ and npm installed (`node --version`)
+- Python 3.11 installed (`py -3.11` or `python3.11`)
+- Node.js v18+ and npm installed (`node -v`)
 
 ### 2. Backend Setup
 ```bash
-# From workspace root
-pip install -r backend/requirements.txt
+# Clone the repository
+git clone https://github.com/Raghava44u/ClauseWise-webapp.git
+cd ClauseWise-webapp
 
-# Run database migrations
-py -3.11 -m alembic upgrade head
+# Install backend dependencies
+pip install -r requirements.txt
 
-# Start FastAPI backend server
-py -3.11 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+# Create .env.local in the root directory:
+cp .env.example .env.local
 ```
-The backend will be live at `http://localhost:8000`, with interactive docs at `http://localhost:8000/docs` and health check at `http://localhost:8000/api/v1/health`.
+
+Edit `.env.local` with your AI credentials:
+```dotenv
+AI_PROVIDER=gemini
+AI_API_KEY=your_gemini_api_key_here
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_MODEL=gemini-2.5-flash
+
+DATABASE_URL=sqlite+aiosqlite:///./clausewise.db
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:8000
+ENABLE_OCR=true
+```
+
+Run the backend server:
+```bash
+# Start FastAPI backend
+python main.py
+```
+*The backend is live at `http://127.0.0.1:8000` (Health Check: `http://127.0.0.1:8000/api/v1/health`, Swagger Docs: `http://127.0.0.1:8000/docs`).*
 
 ### 3. Frontend Setup
+In a new terminal window:
 ```bash
 cd frontend
+
+# Install frontend dependencies
 npm install
+
+# Start Next.js development server
 npm run dev
 ```
-Open `http://localhost:3000` in your browser.
+Open **`http://localhost:3000`** in your browser.
 
 ---
 
-## 🧪 Testing
+## 🧪 Running Automated Tests
 
-### Backend Unit & Integration Tests (25 Tests)
 ```bash
 # Run all backend unit and integration tests
 py -3.11 -m pytest backend/tests -v
 ```
-Tests cover:
-- PDF digital extraction & layout geometry
-- Scanned PDF detection & PaddleOCR fallback
-- DOCX paragraph and table parsing
-- Substring normalization & character offset mapping
-- Deterministic quote verification & hallucination rejection
-- Repeated quote disambiguation & cross-page stitching
-- BM25Plus retrieval & safe absence reporting
-- Contract comparison & numeric currency change detection (`AED 100,000` -> `AED 1,000,000`)
-- Agent tool parameter validation & round execution limits
-- Full FastAPI route integration
-
-### Frontend Production Build
-```bash
-cd frontend
-npm run build
-```
+All 26 tests pass with 100% coverage across text extraction, quotation verification, OCR fallback, BM25 retrieval, document comparison, and agent tool execution.
 
 ---
 
-## 🚀 Render Deployment
+## 🌐 Live Render Deployment
 
-ClauseWise is configured for one-click deployment using Render Blueprints (`render.yaml`):
-
-1. **Push code** to your repository (`main` branch).
-2. In the Render Dashboard, click **New +** -> **Blueprint**.
-3. Select the repository `https://github.com/Raghava44u/ClauseWise-webapp.git`.
-4. Render automatically provisions:
-   - **`clausewise-backend`**: Docker Web Service running Python 3.11, PaddleOCR, and Uvicorn.
-   - **`clausewise-frontend`**: Node Web Service building Next.js.
-   - **`clausewise-db`**: Managed PostgreSQL database.
-   - **`clausewise-data`**: 10GB persistent disk mounted at `/app/uploads`.
-5. In the Render dashboard for `clausewise-backend`, set the environment variable:
-   - `AI_API_KEY`: Your xAI Grok API Key.
-
----
-
-## ⚠️ Security & Public Deployment Note
-
-ClauseWise is designed without user authentication per assignment specifications for single-user review. 
-A publicly accessible deployment is intended for synthetic or non-confidential contracts only. Do not upload confidential or proprietary legal documents to a public service without authentication and access controls.
+- **Backend API**: `https://clausewise-backend-1heh.onrender.com`
+- **Health Check**: `https://clausewise-backend-1heh.onrender.com/api/v1/health`
+- **Interactive OpenAPI Documentation**: `https://clausewise-backend-1heh.onrender.com/docs`
