@@ -1,27 +1,21 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { DocumentItem, Citation, ToolCallInfo, AgentRunState } from "@/lib/types";
+import { DocumentItem, Citation, AgentRunState } from "@/lib/types";
 import { streamResearch } from "@/lib/api";
 import {
   Sparkles,
-  Bot,
-  Search,
-  List,
-  FileSearch,
-  CheckCircle2,
-  AlertTriangle,
   Play,
   Square,
   ShieldCheck,
   ChevronDown,
   ChevronUp,
   FileText,
-  Clock,
   Layers,
   Loader2,
   Terminal,
-  ArrowUpRight
+  ArrowUpRight,
+  CheckCircle2
 } from "lucide-react";
 
 interface ResearchAgentViewProps {
@@ -161,61 +155,57 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
   }, [agentState.toolCalls, agentState.statusMessage]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-obsidian-950/95 text-slate-100 overflow-y-auto p-6 space-y-6">
-      {/* Banner: Part C Option 2 Context */}
-      <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-obsidian-900 via-obsidian-900/90 to-cyan-950/40 p-6 shadow-2xl backdrop-blur-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Part C Option 2: Autonomous Agentic Contract Research</span>
+    <div className="flex-1 flex flex-col h-full bg-slate-50 text-slate-800 overflow-y-auto p-6 space-y-6">
+      {/* Banner Context */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+          <div className="space-y-1 max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
+              <Sparkles className="w-3 h-3 text-emerald-600" />
+              <span>Autonomous Agentic Contract Research</span>
             </span>
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              Real Model-Driven Tool Calling Loop
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+              Model-Driven Multi-Round Tool Calling
             </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Instead of static prompt stuffing, the AI model iteratively decides which contract inspection tools to invoke (<code>search_document</code>, <code>get_section</code>, <code>list_clauses</code>, <code>get_document_overview</code>) across multiple execution rounds before synthesizing a verifiable legal conclusion.
+            <p className="text-xs text-slate-500 leading-relaxed">
+              The AI model iteratively decides which contract inspection tools to invoke (<code>search_document</code>, <code>get_section</code>, <code>list_clauses</code>, <code>get_document_overview</code>) before synthesizing a verifiable legal conclusion.
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-obsidian-800/80 px-3.5 py-2 rounded-xl border border-obsidian-700/80 text-xs text-slate-300 font-mono shrink-0">
-            <Layers className="w-4 h-4 text-cyan-400" />
+          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-mono shrink-0">
+            <Layers className="w-3.5 h-3.5 text-slate-500" />
             <span>Scope: {activeDocIds.length} Contract(s)</span>
           </div>
         </div>
       </div>
 
       {/* Query Formulation Input Box */}
-      <div className="bg-obsidian-900/80 border border-obsidian-800 rounded-2xl p-6 shadow-xl space-y-4 backdrop-blur-xl">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
         <div>
-          <label className="block text-xs font-bold text-slate-300 mb-2 font-mono">
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Legal Research Directive
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              disabled={agentState.status === "running"}
-              placeholder="Specify the legal question or clause analysis objective..."
-              className="w-full px-4 py-3.5 text-xs sm:text-sm bg-obsidian-950 border border-obsidian-800 rounded-xl focus:outline-none focus:border-cyan-500 font-medium text-slate-100 placeholder-slate-500 disabled:opacity-50 transition-all font-sans"
-            />
-          </div>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            disabled={agentState.status === "running"}
+            placeholder="Specify the legal question or clause analysis objective..."
+            className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white font-medium text-slate-900 placeholder-slate-400 disabled:opacity-50 transition-colors shadow-2xs"
+          />
         </div>
 
         {/* Suggested Queries */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider font-mono">
             Sample Directives
           </span>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {sampleResearchQueries.map((sq, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => setQuery(sq)}
-                className="text-left text-[11px] px-3 py-1.5 bg-obsidian-800/80 hover:bg-obsidian-700 text-slate-300 hover:text-white rounded-lg font-medium transition-colors border border-obsidian-700/60 cursor-pointer"
+                className="text-left text-[11px] px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md font-medium transition-colors border border-slate-200 cursor-pointer"
               >
                 "{sq.slice(0, 52)}..."
               </button>
@@ -224,28 +214,28 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
         </div>
 
         {/* Controls: Max Rounds & Launch Button */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-obsidian-800/80">
-          <div className="flex items-center gap-3 text-xs text-slate-300">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-3 text-xs text-slate-600">
             <span className="font-semibold">Max Execution Rounds:</span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               {[2, 4, 6].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setMaxRounds(num)}
                   disabled={agentState.status === "running"}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer ${
                     maxRounds === num
-                      ? "bg-cyan-500 text-obsidian-950 font-bold shadow-md shadow-cyan-500/20"
-                      : "bg-obsidian-800 text-slate-400 hover:bg-obsidian-700 hover:text-white"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
                   {num} Rounds
                 </button>
               ))}
             </div>
-            <span className="text-[11px] text-slate-500 font-mono">
-              (Hard safety cap: 6)
+            <span className="text-[11px] text-slate-400 font-mono">
+              (Safety limit: 6)
             </span>
           </div>
 
@@ -254,7 +244,7 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
               <button
                 type="button"
                 onClick={handleStopResearch}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-600/20 transition-all active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
                 <span>Cancel Research</span>
@@ -264,7 +254,7 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
                 type="button"
                 onClick={handleStartResearch}
                 disabled={!query.trim() || documents.length === 0}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 disabled:from-obsidian-800 disabled:to-obsidian-800 disabled:text-slate-500 text-obsidian-950 text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:cursor-not-allowed cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Launch Autonomous Research</span>
@@ -277,8 +267,8 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
       {/* Real-Time Agent Execution Console & Tool Timeline */}
       {agentState.status !== "idle" && (
         <div className="space-y-4">
-          <div className="bg-obsidian-900/90 border border-obsidian-800 rounded-2xl p-6 text-white shadow-2xl space-y-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-obsidian-800 pb-3">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-white shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-emerald-400" />
                 <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200">
@@ -288,16 +278,16 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
 
               <div className="flex items-center gap-2 font-mono">
                 {agentState.status === "running" ? (
-                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold bg-cyan-950/80 text-cyan-300 border border-cyan-800">
-                    <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                  <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-200 border border-slate-700">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
                     <span>Round {agentState.currentRound} Active</span>
                   </span>
                 ) : (
                   <span
-                    className={`px-3 py-1 rounded-full text-[10px] font-semibold uppercase ${
+                    className={`px-2.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
                       agentState.status === "completed"
-                        ? "bg-emerald-950/80 text-emerald-300 border border-emerald-700"
-                        : "bg-rose-950/80 text-rose-300 border border-rose-700"
+                        ? "bg-emerald-900/60 text-emerald-300 border border-emerald-700"
+                        : "bg-rose-900/60 text-rose-300 border border-rose-700"
                     }`}
                   >
                     {agentState.status}
@@ -308,21 +298,21 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
 
             {/* Status Message */}
             {agentState.statusMessage && (
-              <div className="text-xs font-mono text-slate-300 bg-obsidian-950/80 p-3.5 rounded-xl border border-obsidian-800 flex items-center gap-2.5">
-                <span className="text-emerald-400 font-bold animate-pulse">&gt;</span>
+              <div className="text-xs font-mono text-slate-300 bg-slate-950/80 p-3 rounded-lg border border-slate-800 flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">&gt;</span>
                 <span>{agentState.statusMessage}</span>
               </div>
             )}
 
             {/* Model Tool Invocations Timeline */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-2 pt-1">
               <span className="text-[10px] font-mono uppercase text-slate-500 font-bold tracking-wider">
                 Model Tool Invocations ({agentState.toolCalls.length})
               </span>
 
               {agentState.toolCalls.length === 0 ? (
-                <div className="text-xs font-mono text-slate-500 italic p-3.5 bg-obsidian-950/40 rounded-xl border border-obsidian-800">
-                  Awaiting model's first action directive...
+                <div className="text-xs font-mono text-slate-500 italic p-3 bg-slate-950/40 rounded-lg border border-slate-800">
+                  Awaiting model directives...
                 </div>
               ) : (
                 agentState.toolCalls.map((tc, idx) => {
@@ -331,14 +321,14 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
                   return (
                     <div
                       key={idx}
-                      className="bg-obsidian-950/90 border border-obsidian-800/80 rounded-xl p-3.5 space-y-2 font-mono text-xs"
+                      className="bg-slate-950/90 border border-slate-800 rounded-lg p-3 space-y-2 font-mono text-xs"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-obsidian-800 text-cyan-300 text-[10px] font-bold border border-cyan-500/20">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">
                             Round {tc.round_number}
                           </span>
-                          <span className="text-amber-400 font-bold">
+                          <span className="text-emerald-400 font-bold">
                             {tc.tool_name}
                           </span>
                         </div>
@@ -361,7 +351,7 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
 
                       {/* Result summary */}
                       {tc.result_summary && (
-                        <div className="text-emerald-300 text-[11px] pt-1.5 border-t border-obsidian-800">
+                        <div className="text-emerald-300 text-[11px] pt-1 border-t border-slate-800">
                           <span className="text-slate-500">Output: </span>
                           <span>{tc.result_summary}</span>
                         </div>
@@ -369,7 +359,7 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
 
                       {/* Expandable full tool result */}
                       {isExpanded && tc.raw_result && (
-                        <div className="mt-2 p-3 bg-obsidian-900 rounded-lg border border-obsidian-800 text-[10px] text-slate-300 overflow-x-auto max-h-48 overflow-y-auto">
+                        <div className="mt-2 p-2.5 bg-slate-900 rounded border border-slate-800 text-[10px] text-slate-300 overflow-x-auto max-h-48 overflow-y-auto">
                           <pre>{JSON.stringify(tc.raw_result, null, 2)}</pre>
                         </div>
                       )}
@@ -383,53 +373,53 @@ export const ResearchAgentView: React.FC<ResearchAgentViewProps> = ({
 
           {/* Final Synthesized Legal Answer Card */}
           {agentState.finalAnswer && (
-            <div className="bg-obsidian-900/90 border border-obsidian-800 rounded-2xl p-6 shadow-2xl space-y-5 backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-obsidian-800 pb-3">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                  <h4 className="text-sm font-bold text-white tracking-tight">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <h4 className="text-sm font-bold text-slate-900 tracking-tight">
                     Synthesized Legal Research Findings
                   </h4>
                 </div>
                 <span className="text-xs text-slate-400 font-mono">
-                  Deterministic Source Quote Verification
+                  Verified Quotations
                 </span>
               </div>
 
-              <div className="text-sm leading-relaxed text-slate-200 whitespace-pre-wrap font-serif">
+              <div className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap font-serif">
                 {agentState.finalAnswer}
               </div>
 
               {/* Verified Supporting Citations */}
               {agentState.citations && agentState.citations.length > 0 && (
-                <div className="pt-4 border-t border-obsidian-800 space-y-3">
-                  <h5 className="text-xs font-bold text-slate-300 flex items-center gap-1.5 font-mono">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="pt-4 border-t border-slate-100 space-y-2">
+                  <h5 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 font-mono">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Verified Authoritative Quotations ({agentState.citations.length})</span>
                   </h5>
 
-                  <div className="grid grid-cols-1 gap-2.5">
+                  <div className="grid grid-cols-1 gap-2">
                     {agentState.citations.map((cite, cIdx) => (
                       <div
                         key={cIdx}
                         onClick={() => onNavigateCitation(cite)}
-                        className="p-3.5 bg-emerald-950/20 hover:bg-emerald-950/30 border border-emerald-500/30 rounded-xl text-xs cursor-pointer transition-all group"
+                        className="p-3 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-200 rounded-lg text-xs cursor-pointer transition-colors"
                       >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-semibold text-slate-200 truncate max-w-sm flex items-center gap-1.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-slate-800 truncate max-w-sm flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5 text-slate-400" />
                             <span>{cite.document_title} • Page {cite.page_number || 1}</span>
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">
                             100% Verbatim Match
                           </span>
                         </div>
-                        <p className="italic text-slate-300 font-serif line-clamp-3 group-hover:text-white">
+                        <p className="italic text-slate-800 font-serif line-clamp-3">
                           "{cite.quote}"
                         </p>
-                        <div className="mt-2 flex items-center justify-end text-[10px] text-emerald-400 font-mono pt-1 border-t border-obsidian-800/60">
-                          <span className="flex items-center gap-0.5 group-hover:underline">
-                            <span>Inspect Source in Document</span>
+                        <div className="mt-1.5 flex items-center justify-end text-[10px] text-emerald-700 font-mono">
+                          <span className="flex items-center gap-0.5 hover:underline">
+                            <span>Inspect Source</span>
                             <ArrowUpRight className="w-3 h-3" />
                           </span>
                         </div>

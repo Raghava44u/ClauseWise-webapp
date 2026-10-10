@@ -242,7 +242,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-obsidian-950 text-slate-100 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       {/* Sidebar Library */}
       <Sidebar
         documents={documents}
@@ -258,7 +258,7 @@ export default function Home() {
       />
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-obsidian-950">
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-slate-50">
         <Header
           activeTab={activeTab}
           onTabChange={setActiveTab}

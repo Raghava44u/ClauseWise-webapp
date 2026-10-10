@@ -1,26 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DocumentItem, ComparisonResponse, ComparisonItem, Citation } from "@/lib/types";
+import { DocumentItem, ComparisonResponse, Citation } from "@/lib/types";
 import { compareDocuments, createAmendmentDemo } from "@/lib/api";
 import {
   GitCompare,
   AlertOctagon,
-  AlertTriangle,
-  Info,
-  CheckCircle2,
-  ArrowRight,
   Filter,
   DollarSign,
-  FileText,
   Loader2,
   PlusCircle,
   MinusCircle,
   Edit3,
   Sparkles,
   Upload,
-  ShieldAlert,
-  Layers,
   ArrowUpRight
 } from "lucide-react";
 
@@ -51,11 +44,11 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   // Auto-align distinct documents when list changes
   useEffect(() => {
     if (documents.length >= 2) {
-      if (!baseDocId || !documents.some(d => d.id === baseDocId)) {
+      if (!baseDocId || !documents.some((d) => d.id === baseDocId)) {
         setBaseDocId(documents[0].id);
       }
-      if (!targetDocId || targetDocId === baseDocId || !documents.some(d => d.id === targetDocId)) {
-        const other = documents.find(d => d.id !== (baseDocId || documents[0].id));
+      if (!targetDocId || targetDocId === baseDocId || !documents.some((d) => d.id === targetDocId)) {
+        const other = documents.find((d) => d.id !== (baseDocId || documents[0].id));
         if (other) setTargetDocId(other.id);
       }
     } else if (documents.length === 1) {
@@ -97,7 +90,6 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
       }
       setBaseDocId(base.id);
       setTargetDocId(newDoc.id);
-      // Auto run comparison between the baseline and newly generated amendment
       setTimeout(() => {
         handleCompare(base.id, newDoc.id);
       }, 500);
@@ -115,88 +107,80 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   }) || [];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-obsidian-950/95 overflow-y-auto p-6 space-y-6 text-slate-100">
-      {/* Informative Guidance Banner if less than 2 documents are present */}
+    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-y-auto p-6 space-y-6 text-slate-800">
+      {/* Guidance Banner if less than 2 documents are present */}
       {documents.length < 2 && (
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-obsidian-900 via-obsidian-900/90 to-emerald-950/40 p-6 shadow-2xl backdrop-blur-xl">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Dual-Contract Redline Engine</span>
-              </div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
-                Comparison Requires Two Contract Versions
-              </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                You currently have <span className="font-semibold text-emerald-400">{documents.length} document</span> in your library. Contract comparison performs automated clause-by-clause alignment between an <span className="text-white font-medium">Original Baseline</span> and a <span className="text-white font-medium">Revised Target</span> contract, detecting numerical shifts (e.g. indemnity caps, payment terms), risk changes, and deletions.
-              </p>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-1 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-semibold">
+              <Sparkles className="w-3 h-3 text-emerald-600" />
+              <span>Contract Comparison Engine</span>
             </div>
+            <h3 className="text-sm font-bold text-slate-900">
+              Comparison Requires Two Contract Versions
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              You currently have <span className="font-semibold text-slate-800">{documents.length} document</span> in your library. Contract comparison performs automated clause-by-clause alignment between an <span className="font-medium text-slate-700">Original Baseline</span> and a <span className="font-medium text-slate-700">Revised / Amended Target</span> contract, detecting numerical shifts (indemnity caps, payment terms), risk changes, and deletions.
+            </p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
-              {documents.length === 1 && (
-                <button
-                  onClick={handleGenerateAmendedDemo}
-                  disabled={generatingDemo}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-obsidian-950 text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {generatingDemo ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Synthesizing Redline Revision...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>Generate Sample Revised Version (1-Click)</span>
-                    </>
-                  )}
-                </button>
-              )}
+          <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0">
+            {documents.length === 1 && (
+              <button
+                onClick={handleGenerateAmendedDemo}
+                disabled={generatingDemo}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {generatingDemo ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Generating Revision...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Generate Sample Revised Version (1-Click)</span>
+                  </>
+                )}
+              </button>
+            )}
 
-              {onOpenUploadModal && (
-                <button
-                  onClick={onOpenUploadModal}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-700 border border-obsidian-700 text-slate-200 text-xs font-semibold transition-all active:scale-95"
-                >
-                  <Upload className="w-4 h-4 text-cyan-400" />
-                  <span>Upload 2nd Contract</span>
-                </button>
-              )}
-            </div>
+            {onOpenUploadModal && (
+              <button
+                onClick={onOpenUploadModal}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5 text-slate-500" />
+                <span>Upload 2nd Contract</span>
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* Contract Version Selector Panel */}
-      <div className="bg-obsidian-900/80 border border-obsidian-800 rounded-2xl p-6 shadow-xl backdrop-blur-xl">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <GitCompare className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <GitCompare className="w-4 h-4 text-slate-700" />
             <span>Clause-Level Contract Version Comparison</span>
           </h3>
-          <span className="text-[11px] font-mono text-slate-400 px-2.5 py-1 bg-obsidian-800/80 border border-obsidian-700/60 rounded-full">
-            {documents.length} Contracts Available
+          <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+            {documents.length} Contracts in Library
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Baseline Contract Selector */}
-          <div className="bg-obsidian-950/60 border border-obsidian-800 rounded-xl p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                Baseline Contract (Original)
-              </label>
-              <span className="text-[10px] text-slate-500 font-mono">Reference</span>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 block">
+              Baseline Contract (Original)
+            </label>
             <select
               value={baseDocId}
               onChange={(e) => setBaseDocId(e.target.value)}
               disabled={documents.length === 0}
-              className="w-full text-xs p-2.5 bg-obsidian-900 border border-obsidian-700/80 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-200 font-medium cursor-pointer"
+              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-medium cursor-pointer"
             >
               {documents.length === 0 ? (
                 <option value="">No contracts uploaded yet</option>
@@ -211,19 +195,15 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
           </div>
 
           {/* Revised Contract Selector */}
-          <div className="bg-obsidian-950/60 border border-obsidian-800 rounded-xl p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                Revised Contract (Target / Redline)
-              </label>
-              <span className="text-[10px] text-slate-500 font-mono">Amendments</span>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 block">
+              Revised Contract (Target / Redline)
+            </label>
             <select
               value={targetDocId}
               onChange={(e) => setTargetDocId(e.target.value)}
               disabled={documents.length < 2}
-              className="w-full text-xs p-2.5 bg-obsidian-900 border border-obsidian-700/80 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-200 font-medium cursor-pointer disabled:opacity-50"
+              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 text-slate-800 font-medium cursor-pointer disabled:opacity-50"
             >
               {documents.length < 2 ? (
                 <option value="">Upload or generate a 2nd contract to compare</option>
@@ -239,31 +219,30 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
         </div>
 
         {error && (
-          <div className="mt-4 p-3 bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs rounded-xl flex items-center gap-2.5">
-            <AlertOctagon className="w-4 h-4 shrink-0 text-rose-400" />
+          <div className="mt-3 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+            <AlertOctagon className="w-4 h-4 shrink-0 text-rose-500" />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-obsidian-800/60">
-          <div className="text-[11px] text-slate-400 flex items-center gap-2">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-            <span>Detects monetary discrepancies, liability shift, and clause omissions</span>
-          </div>
+        <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
+          <p className="text-[11px] text-slate-500">
+            Aligns clauses, detects monetary shifts, and flags critical legal changes.
+          </p>
 
           <button
             onClick={() => handleCompare()}
             disabled={loading || documents.length < 2 || baseDocId === targetDocId}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 disabled:from-obsidian-800 disabled:to-obsidian-800 disabled:text-slate-500 text-obsidian-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/10 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-obsidian-950" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Aligning & Analyzing Clauses...</span>
               </>
             ) : (
               <>
-                <GitCompare className="w-4 h-4 text-obsidian-950" />
+                <GitCompare className="w-3.5 h-3.5" />
                 <span>Run Version Comparison</span>
               </>
             )}
@@ -275,50 +254,44 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
       {comparison && (
         <div className="space-y-4">
           {/* Summary Metric Header */}
-          <div className="bg-gradient-to-br from-obsidian-900 to-obsidian-950 border border-obsidian-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-slate-900 text-white rounded-xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <h4 className="text-base font-bold text-white tracking-tight">
-                  Comparison Summary & Risk Audit
-                </h4>
-              </div>
-              <p className="text-xs text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
+              <h4 className="text-sm font-bold tracking-tight">
+                Comparison Summary & Risk Audit
+              </h4>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
                 {comparison.summary}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <span className="px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 rounded-xl text-xs font-bold text-rose-300 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              <span className="px-2.5 py-1 bg-rose-500/20 border border-rose-400/30 rounded-md text-xs font-semibold text-rose-300">
                 {comparison.items.filter((i) => i.significance === "critical").length} Critical
               </span>
-              <span className="px-3 py-1.5 bg-amber-500/15 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="px-2.5 py-1 bg-amber-500/20 border border-amber-400/30 rounded-md text-xs font-semibold text-amber-300">
                 {comparison.items.filter((i) => i.is_numeric_change).length} Numeric Shifts
               </span>
-              <span className="px-3 py-1.5 bg-cyan-500/15 border border-cyan-500/30 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" />
+              <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-md text-xs font-semibold text-slate-300">
                 {comparison.items.length} Total Clauses Analyzed
               </span>
             </div>
           </div>
 
           {/* Filter Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-obsidian-900/60 p-3.5 border border-obsidian-800 rounded-xl text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1 text-slate-400 font-semibold mr-1">
-                <Filter className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 border border-slate-200 rounded-lg text-xs shadow-2xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-1 text-slate-500 font-semibold mr-1">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
                 <span>Significance:</span>
               </div>
               {(["all", "critical", "high", "medium", "low"] as const).map((sig) => (
                 <button
                   key={sig}
                   onClick={() => setFilterSignificance(sig)}
-                  className={`px-3 py-1 rounded-lg capitalize font-medium text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded text-xs capitalize font-medium transition-colors cursor-pointer ${
                     filterSignificance === sig
-                      ? "bg-emerald-500 text-obsidian-950 font-bold shadow-md shadow-emerald-500/20"
-                      : "bg-obsidian-800 text-slate-300 hover:bg-obsidian-700 hover:text-white"
+                      ? "bg-slate-900 text-white font-semibold"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
                   {sig}
@@ -328,45 +301,44 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
 
             <button
               onClick={() => setFilterNumericOnly(!filterNumericOnly)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium text-xs transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                 filterNumericOnly
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                  : "bg-obsidian-800 text-slate-300 hover:bg-obsidian-700"
+                  ? "bg-amber-100 text-amber-900 border border-amber-300 font-semibold"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+              <DollarSign className="w-3.5 h-3.5 text-amber-600" />
               <span>Numeric Changes Only</span>
             </button>
           </div>
 
           {/* Clauses Differences List */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredItems.length === 0 ? (
-              <div className="p-12 text-center text-slate-400 text-xs bg-obsidian-900/40 rounded-2xl border border-obsidian-800">
+              <div className="p-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
                 No clause changes matching active filters.
               </div>
             ) : (
               filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-obsidian-900/80 border border-obsidian-800 hover:border-obsidian-700 rounded-2xl p-5 shadow-xl space-y-4 transition-all"
+                  className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-3"
                 >
                   {/* Item Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-obsidian-800/80 pb-3">
-                    <h5 className="font-bold text-sm text-white flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                    <h5 className="font-bold text-sm text-slate-900">
                       {item.clause_name}
                     </h5>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {/* Change Type Badge */}
                       <span
-                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
                           item.change_type === "added"
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            ? "bg-emerald-100 text-emerald-800"
                             : item.change_type === "removed"
-                            ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                            : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-blue-100 text-blue-800"
                         }`}
                       >
                         {item.change_type === "added" && <PlusCircle className="w-3 h-3" />}
@@ -377,14 +349,14 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
 
                       {/* Significance Badge */}
                       <span
-                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                           item.significance === "critical"
-                            ? "bg-rose-500 text-obsidian-950 font-black shadow-sm shadow-rose-500/30"
+                            ? "bg-rose-600 text-white"
                             : item.significance === "high"
-                            ? "bg-amber-500 text-obsidian-950 font-bold"
+                            ? "bg-amber-500 text-white"
                             : item.significance === "medium"
-                            ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
-                            : "bg-slate-800 text-slate-400"
+                            ? "bg-sky-100 text-sky-800"
+                            : "bg-slate-100 text-slate-600"
                         }`}
                       >
                         {item.significance}
@@ -392,7 +364,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
 
                       {/* Numeric shift callout */}
                       {item.is_numeric_change && (
-                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                           Numeric Shift
                         </span>
                       )}
@@ -400,55 +372,49 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
                   </div>
 
                   {/* Plain Language Substantive Legal Explanation */}
-                  <div className="text-xs text-slate-200 font-medium leading-relaxed bg-obsidian-950/80 p-3.5 rounded-xl border border-obsidian-800">
-                    <span className="font-bold text-emerald-400 block mb-1">
+                  <div className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-0.5">
                       Substantive Legal Analysis:
                     </span>
                     {item.explanation}
                   </div>
 
                   {/* Side-by-side Text Comparison */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     {/* Original Baseline */}
-                    <div className="p-4 bg-rose-950/15 border border-rose-900/40 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-rose-300">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                          Original Baseline {item.base_page ? `(Page ${item.base_page})` : ""}
-                        </span>
+                    <div className="p-3 bg-rose-50/40 border border-rose-200 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-rose-800">
+                        <span>Original Baseline {item.base_page ? `(Page ${item.base_page})` : ""}</span>
                         {item.base_citation && (
                           <button
                             onClick={() => onNavigateCitation(item.base_citation!)}
-                            className="text-[10px] text-rose-400 hover:text-rose-200 underline flex items-center gap-0.5 transition-colors"
+                            className="text-[10px] text-rose-700 underline hover:text-rose-900 flex items-center gap-0.5 cursor-pointer"
                           >
                             <span>Inspect Source</span>
                             <ArrowUpRight className="w-3 h-3" />
                           </button>
                         )}
                       </div>
-                      <p className="text-slate-300 font-mono text-[11px] leading-relaxed line-clamp-6">
+                      <p className="text-slate-800 font-serif leading-relaxed line-clamp-6">
                         {item.original_text || "— Clause was not present in baseline contract —"}
                       </p>
                     </div>
 
                     {/* Revised Target */}
-                    <div className="p-4 bg-emerald-950/15 border border-emerald-900/40 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-300">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          Revised Target {item.target_page ? `(Page ${item.target_page})` : ""}
-                        </span>
+                    <div className="p-3 bg-emerald-50/40 border border-emerald-200 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-800">
+                        <span>Revised Target {item.target_page ? `(Page ${item.target_page})` : ""}</span>
                         {item.target_citation && (
                           <button
                             onClick={() => onNavigateCitation(item.target_citation!)}
-                            className="text-[10px] text-emerald-400 hover:text-emerald-200 underline flex items-center gap-0.5 transition-colors"
+                            className="text-[10px] text-emerald-700 underline hover:text-emerald-900 flex items-center gap-0.5 cursor-pointer"
                           >
                             <span>Inspect Source</span>
                             <ArrowUpRight className="w-3 h-3" />
                           </button>
                         )}
                       </div>
-                      <p className="text-slate-300 font-mono text-[11px] leading-relaxed line-clamp-6">
+                      <p className="text-slate-800 font-serif leading-relaxed line-clamp-6">
                         {item.revised_text || "— Clause removed in revised contract —"}
                       </p>
                     </div>
