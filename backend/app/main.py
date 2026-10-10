@@ -65,6 +65,7 @@ logger.info(f"Configuring CORS for permitted origins: {origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins if origins else ["http://localhost:3000"],
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
