@@ -9,11 +9,12 @@ import {
   CheckCircle,
   AlertTriangle,
   FileText,
-  CornerDownRight,
   ShieldCheck,
   ShieldAlert,
   Loader2,
-  Info
+  Bot,
+  User,
+  ArrowUpRight
 } from "lucide-react";
 
 interface ChatViewProps {
@@ -61,40 +62,41 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const samplePrompts = [
     "What is the limitation of liability cap?",
-    "What are the termination notice requirements?",
-    "Is there an indemnification obligation?",
-    "What is the governing law and jurisdiction?"
+    "What are the payment and invoice settlement terms?",
+    "What are the termination for convenience requirements?",
+    "Is there an indemnification obligation or penalty clause?"
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-obsidian-950/95 text-slate-100 relative overflow-hidden">
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 && !isStreaming ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-12">
-            <div className="w-12 h-12 rounded-xl bg-navy-100 flex items-center justify-center text-navy-800 mb-4 shadow-xs">
-              <Sparkles className="w-6 h-6 text-navy-700" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
+              <Sparkles className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-semibold text-slate-800">
+            <h3 className="text-lg font-bold text-white tracking-tight">
               Contract Intelligence Chat
             </h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm">
-              Ask questions about {isMultiDoc ? "selected contracts" : documentTitle || "this contract"}. Every response is backed by deterministically verified verbatim quotations.
+            <p className="text-xs text-slate-400 mt-1.5 max-w-sm leading-relaxed">
+              Ask questions about <span className="text-emerald-400 font-medium">{isMultiDoc ? "selected contracts" : documentTitle || "this contract"}</span>. Every response is deterministically backed by exact verbatim source quotations and character offsets.
             </p>
 
-            <div className="mt-6 w-full space-y-2">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Suggested Inquiries
+            <div className="mt-8 w-full space-y-2.5">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                Suggested Legal Inquiries
               </p>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-2.5">
                 {samplePrompts.map((prompt, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
                       setInputQuery(prompt);
                     }}
-                    className="text-left text-xs p-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 font-medium transition-all shadow-2xs hover:border-slate-300"
+                    className="text-left text-xs p-3 bg-obsidian-900/80 hover:bg-obsidian-850 border border-obsidian-800 hover:border-emerald-500/40 rounded-xl text-slate-300 hover:text-white font-medium transition-all shadow-md group cursor-pointer"
                   >
+                    <span className="text-emerald-400 font-bold mr-1.5 group-hover:translate-x-0.5 inline-block transition-transform">→</span>
                     "{prompt}"
                   </button>
                 ))}
@@ -112,71 +114,83 @@ export const ChatView: React.FC<ChatViewProps> = ({
               >
                 {/* Message Bubble */}
                 <div
-                  className={`max-w-3xl rounded-xl p-4 text-sm leading-relaxed shadow-xs ${
+                  className={`max-w-3xl rounded-2xl p-4 sm:p-5 text-sm leading-relaxed shadow-xl ${
                     msg.role === "user"
-                      ? "bg-navy-800 text-white font-medium rounded-br-none"
-                      : "bg-white text-slate-800 border border-slate-200 rounded-bl-none"
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-br-xs shadow-emerald-900/20"
+                      : "bg-obsidian-900/90 text-slate-200 border border-obsidian-800 rounded-bl-xs backdrop-blur-xl"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
 
                   {msg.is_interrupted && (
-                    <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-medium bg-amber-50 p-1.5 rounded border border-amber-200">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Generation stopped by user. Partial answer retained.</span>
+                    <div className="mt-3 text-xs text-amber-300 flex items-center gap-1.5 font-medium bg-amber-950/30 p-2.5 rounded-xl border border-amber-800/50">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <span>Generation stopped by user. Partial analysis preserved.</span>
                     </div>
                   )}
 
                   {/* Verified Citations List */}
                   {msg.citations && msg.citations.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <div className="mt-4 pt-3.5 border-t border-obsidian-800 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
+                        <span className="flex items-center gap-1.5 text-emerald-400">
+                          <ShieldCheck className="w-4 h-4" />
                           <span>Supporting Source Citations ({msg.citations.length})</span>
                         </span>
-                        <span className="text-[10px] text-slate-400">
-                          Click quote to jump to document
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          Click quote to jump to passage
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2 mt-2">
+                      <div className="grid grid-cols-1 gap-2.5 mt-2">
                         {msg.citations.map((cite, cIdx) => (
                           <div
                             key={cIdx}
                             onClick={() => onCitationClick(cite)}
-                            className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all hover:shadow-xs group ${
+                            className={`p-3 rounded-xl border text-xs cursor-pointer transition-all hover:shadow-lg group ${
                               cite.verified
-                                ? "bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50/80"
-                                : "bg-amber-50/40 border-amber-200 hover:bg-amber-50/80"
+                                ? "bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-950/30"
+                                : "bg-amber-950/20 border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-950/30"
                             }`}
                           >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-slate-700 flex items-center gap-1">
-                                <FileText className="w-3 h-3 text-slate-400" />
-                                <span className="truncate max-w-xs">{cite.document_title}</span>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-semibold text-slate-300 flex items-center gap-1.5 truncate max-w-xs">
+                                <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="truncate">{cite.document_title}</span>
                                 {cite.page_number && (
-                                  <span className="text-[11px] text-slate-500 font-normal">
-                                    • Page {cite.page_number}
+                                  <span className="text-[10px] text-slate-400 font-mono bg-obsidian-800 px-1.5 py-0.5 rounded">
+                                    P.{cite.page_number}
                                   </span>
                                 )}
                               </span>
                               {cite.verified ? (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-0.5">
-                                  <CheckCircle className="w-3 h-3 text-emerald-600" />
-                                  <span>Verified Match (100%)</span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3 text-emerald-400" />
+                                  <span>100% Verbatim Match</span>
                                 </span>
                               ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 flex items-center gap-0.5">
-                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-amber-400" />
                                   <span>Unverified Quote</span>
                                 </span>
                               )}
                             </div>
 
-                            <p className="text-slate-800 italic line-clamp-3 group-hover:text-navy-900">
+                            <p className="text-slate-300 italic font-serif leading-relaxed line-clamp-3 group-hover:text-white">
                               "{cite.quote}"
                             </p>
+
+                            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono pt-1 border-t border-obsidian-800/50">
+                              <span>
+                                {cite.start_offset !== undefined && cite.end_offset !== undefined
+                                  ? `Offsets: [${cite.start_offset} — ${cite.end_offset}]`
+                                  : "Exact Source Matched"}
+                              </span>
+                              <span className="flex items-center gap-0.5 text-emerald-400 group-hover:underline">
+                                <span>Inspect in Document</span>
+                                <ArrowUpRight className="w-3 h-3" />
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -184,36 +198,47 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   )}
                 </div>
 
-                <span className="text-[10px] text-slate-400 mt-1 px-1">
-                  {msg.role === "user" ? "You" : "ClauseWise AI"}
-                </span>
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1.5 px-1 font-mono">
+                  {msg.role === "user" ? (
+                    <>
+                      <User className="w-3 h-3 text-slate-400" />
+                      <span>Legal Counsel</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="w-3 h-3 text-emerald-400" />
+                      <span>ClauseWise Intelligence</span>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
 
             {/* Currently Streaming Assistant Bubble */}
             {isStreaming && (
               <div className="flex flex-col items-start">
-                <div className="max-w-3xl rounded-xl p-4 text-sm leading-relaxed bg-white text-slate-800 border border-slate-200 shadow-xs rounded-bl-none">
+                <div className="max-w-3xl rounded-2xl p-5 text-sm leading-relaxed bg-obsidian-900/95 text-slate-200 border border-obsidian-800 shadow-2xl rounded-bl-xs">
                   {streamingStatus && (
-                    <div className="mb-2 text-xs text-navy-700 flex items-center gap-1.5 font-medium bg-navy-50/80 p-2 rounded border border-navy-100">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-navy-600" />
+                    <div className="mb-3 text-xs text-cyan-300 flex items-center gap-2 font-medium bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-800/40">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
                       <span>{streamingStatus}</span>
                     </div>
                   )}
 
-                  <div className="whitespace-pre-wrap">{streamingToken}</div>
+                  <div className="whitespace-pre-wrap leading-relaxed">{streamingToken}</div>
 
                   {streamingCitations.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                      <div className="text-xs font-semibold text-slate-500">
-                        Verifying {streamingCitations.length} citations...
+                    <div className="mt-4 pt-3 border-t border-obsidian-800 space-y-2">
+                      <div className="text-xs font-semibold text-slate-400 flex items-center gap-2">
+                        <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                        <span>Verifying {streamingCitations.length} quotations in document...</span>
                       </div>
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] text-slate-400 mt-1 px-1 flex items-center gap-1">
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                  <span>Streaming from Grok...</span>
+                <span className="text-[10px] text-emerald-400 mt-1.5 px-1 flex items-center gap-1 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Streaming from Gemini 2.5 Flash...</span>
                 </span>
               </div>
             )}
@@ -223,8 +248,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       {/* Input Box Footer */}
-      <div className="p-4 bg-white border-t border-slate-200">
-        <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
+      <div className="p-4 bg-obsidian-900/90 border-t border-obsidian-800 backdrop-blur-xl">
+        <form onSubmit={handleSubmit} className="relative flex items-center gap-2.5 max-w-5xl mx-auto">
           <input
             type="text"
             value={inputQuery}
@@ -232,17 +257,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
             placeholder={
               isMultiDoc
                 ? "Ask a question comparing selected contracts..."
-                : "Ask anything about this contract (e.g. liability, termination, clauses)..."
+                : "Ask anything about this contract (e.g. liabilities, indemnity, terms)..."
             }
             disabled={isStreaming}
-            className="flex-1 px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-600 text-slate-900 placeholder-slate-400 disabled:opacity-60"
+            className="flex-1 px-4 py-3.5 text-xs sm:text-sm bg-obsidian-950 border border-obsidian-800 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-100 placeholder-slate-500 disabled:opacity-50 transition-all font-sans"
           />
 
           {isStreaming ? (
             <button
               type="button"
               onClick={onStopGeneration}
-              className="flex items-center gap-1.5 px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+              className="flex items-center gap-1.5 px-5 py-3.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-600/20 transition-all active:scale-95 cursor-pointer"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
               <span>Stop</span>
@@ -251,10 +276,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <button
               type="submit"
               disabled={!inputQuery.trim()}
-              className="flex items-center gap-1.5 px-4 py-3 bg-navy-800 hover:bg-navy-900 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+              className="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 disabled:from-obsidian-800 disabled:to-obsidian-800 disabled:text-slate-500 text-obsidian-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/10 transition-all active:scale-95 disabled:cursor-not-allowed cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5 text-sky-400" />
-              <span>Send</span>
+              <Send className="w-3.5 h-3.5" />
+              <span>Ask AI</span>
             </button>
           )}
         </form>

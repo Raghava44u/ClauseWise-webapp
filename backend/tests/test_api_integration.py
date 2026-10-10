@@ -67,3 +67,43 @@ async def test_reject_unsupported_file_extension():
         res = await client.post("/api/v1/documents", files=files)
         assert res.status_code == 400
         assert "Unsupported file format" in res.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_amendment_demo_and_compare():
+    await init_db()
+    # 1. Create a base document
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "ARTICLE 1. PAYMENT TERMS\nPayment is due in 30 days.\nARTICLE 2. LIABILITY\nLiability is capped at AED 500,000.")
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        files = {"file": ("baseline_agreement.pdf", pdf_bytes, "application/pdf")}
+        res = await client.post("/api/v1/documents", files=files)
+        assert res.status_code == 200
+        base_id = res.json()["id"]
+
+        # 2. Trigger create-amendment-demo
+        demo_res = await client.post(f"/api/v1/documents/{base_id}/create-amendment-demo")
+        assert demo_res.status_code == 200
+        amended_doc = demo_res.json()
+        assert amended_doc["status"] == "ready"
+        assert "Amended" in amended_doc["filename"]
+        target_id = amended_doc["id"]
+
+        # 3. Compare baseline vs amended
+        comp_res = await client.post("/api/v1/documents/compare", json={
+            "base_document_id": base_id,
+            "target_document_id": target_id
+        })
+        assert comp_res.status_code == 200
+        comp_data = comp_res.json()
+        assert comp_data["status"] == "ready"
+        assert len(comp_data["items"]) > 0
+
+        # Cleanup
+        await client.delete(f"/api/v1/documents/{base_id}")
+        await client.delete(f"/api/v1/documents/{target_id}")
+

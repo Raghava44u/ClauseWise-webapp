@@ -112,6 +112,18 @@ export async function compareDocuments(
   return res.json();
 }
 
+export async function createAmendmentDemo(documentId: string): Promise<DocumentItem> {
+  const res = await fetch(`${BACKEND_URL}/api/v1/documents/${documentId}/create-amendment-demo`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to create amendment demo" }));
+    throw new Error(err.detail || "Failed to create amendment demo");
+  }
+  return res.json();
+}
+
+
 export interface StreamChatCallbacks {
   onStatus?: (message: string) => void;
   onToken?: (token: string) => void;

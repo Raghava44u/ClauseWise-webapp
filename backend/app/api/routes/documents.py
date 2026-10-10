@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import List
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
@@ -138,6 +139,90 @@ async def get_document_clauses(document_id: str, db: AsyncSession = Depends(get_
 
     return clause_list
 
+@router.post("/{document_id}/create-amendment-demo", response_model=DocumentResponse)
+async def create_amendment_demo(document_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Generates a synthetic redlined amendment contract based on an existing document.
+    Enables immediate evaluation of version comparison, numeric deltas, and risk classifications.
+    """
+    import fitz
+    from backend.app.core.config import settings
+
+    stmt = select(Document).where(Document.id == document_id)
+    result = await db.execute(stmt)
+    base_doc = result.scalar_one_or_none()
+    if not base_doc:
+        raise HTTPException(status_code=404, detail="Base document not found")
+
+    new_doc_id = str(uuid.uuid4())
+    base_stem = os.path.splitext(base_doc.filename)[0]
+    new_filename = f"{base_stem}_v2_Amended.pdf"
+    stored_filename = f"{new_doc_id}_{new_filename}"
+    destination = settings.upload_path / stored_filename
+
+    # Create amended PDF with PyMuPDF
+    doc = fitz.open()
+    page1 = doc.new_page(width=595, height=842)
+
+    text_lines = [
+        "CONTRACT AMENDMENT & REDLINE REVISION NO. 1",
+        f"Reference Agreement: {base_doc.filename}",
+        "Date of Amendment: October 2026",
+        "",
+        "SECTION 1: REVISED PAYMENT TERMS & PENALTIES",
+        "All undisputed invoices shall be payable strictly within sixty (60) calendar days of invoice receipt (previously thirty (30) days). Any past due balance shall accrue a late financing charge of 1.5% per month.",
+        "",
+        "SECTION 2: REVISED LIMITATION OF LIABILITY & INDEMNIFICATION",
+        "Notwithstanding any prior provisions, the aggregate liability of either party arising under or related to this Agreement shall be capped at AED 1,000,000 (increased from AED 500,000). Both parties agree to mutual indemnification for direct third-party gross negligence claims.",
+        "",
+        "SECTION 3: TERMINATION FOR CONVENIENCE & CANCELLATION FEE",
+        "Either party may terminate this Agreement without cause upon ninety (90) calendar days prior written notice (amended from thirty (30) days). In the event of early termination by Client, an early termination settlement fee of USD $25,000 shall immediately become due.",
+        "",
+        "SECTION 4: DATA PROTECTION, SECURITY AUDIT & BREACH PROTOCOL",
+        "Vendor shall implement SOC2 Type II controls. In the event of any confirmed security incident or data breach, Vendor shall notify Client within seventy-two (72) hours. Client retains the right to conduct an independent annual cybersecurity audit.",
+        "",
+        "SECTION 5: GOVERNING LAW & ARBITRATION VENUE",
+        "This Agreement shall be governed by and construed in accordance with the laws of England and Wales. Any controversy or dispute shall be settled by binding arbitration administered by the London Court of International Arbitration (LCIA) in London, UK."
+    ]
+
+    p = fitz.Point(50, 60)
+    for line in text_lines:
+        if line.startswith("CONTRACT AMENDMENT"):
+            page1.insert_text(p, line, fontsize=15, fontname="helv", color=(0.1, 0.2, 0.5))
+            p.y += 24
+        elif line.startswith("SECTION"):
+            page1.insert_text(p, line, fontsize=12, fontname="helv", color=(0.05, 0.45, 0.4))
+            p.y += 18
+        elif line.startswith("Reference") or line.startswith("Date"):
+            page1.insert_text(p, line, fontsize=9, fontname="helv", color=(0.4, 0.4, 0.4))
+            p.y += 14
+        elif not line:
+            p.y += 10
+        else:
+            rect = fitz.Rect(50, p.y, 545, p.y + 70)
+            page1.insert_textbox(rect, line, fontsize=10, fontname="helv", color=(0.15, 0.15, 0.15))
+            p.y += 55
+
+    doc.save(str(destination))
+    doc.close()
+
+    file_size = os.path.getsize(str(destination))
+
+    new_doc = Document(
+        id=new_doc_id,
+        filename=new_filename,
+        file_type="pdf",
+        file_size=file_size,
+        file_path=str(destination),
+        status="uploading"
+    )
+    db.add(new_doc)
+    await db.commit()
+    await db.refresh(new_doc)
+
+    processed = await DocumentService.process_document(new_doc_id, db)
+    return processed
+
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, db: AsyncSession = Depends(get_db)):
     """
@@ -147,3 +232,4 @@ async def delete_document(document_id: str, db: AsyncSession = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Document successfully deleted", "id": document_id}
+

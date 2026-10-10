@@ -242,7 +242,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-obsidian-950 text-slate-100 font-sans">
       {/* Sidebar Library */}
       <Sidebar
         documents={documents}
@@ -258,7 +258,7 @@ export default function Home() {
       />
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-obsidian-950">
         <Header
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -289,6 +289,10 @@ export default function Home() {
               clauses={clauses}
               highlightCitation={highlightCitation}
               onClearHighlight={() => setHighlightCitation(null)}
+              onAskAboutClause={(text) => {
+                setActiveTab("chat");
+                handleSendMessage(`Please analyze this clause in detail: "${text}"`);
+              }}
             />
           )}
 
@@ -296,6 +300,11 @@ export default function Home() {
             <ComparisonView
               documents={documents}
               onNavigateCitation={handleCitationClick}
+              onDocumentAdded={(newDoc) => {
+                setDocuments((prev) => [newDoc, ...prev]);
+                handleSelectDoc(newDoc.id);
+              }}
+              onOpenUploadModal={() => setIsUploadModalOpen(true)}
             />
           )}
 

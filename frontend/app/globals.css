@@ -3,51 +3,116 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 15, 23, 42;
-  --background-rgb: 248, 250, 252;
+  --foreground-rgb: 241, 245, 249;
+  --background-rgb: 7, 10, 19;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
 }
 
-/* Custom scrollbars for document passages and chat history */
+/* Custom sleek scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(15, 23, 42, 0.4);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: #334155;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569;
 }
 
-/* Citation active highlight animation */
-@keyframes highlightPulse {
+/* Interactive Text Segment: Default Clickable State */
+.text-segment-clickable {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+
+.text-segment-clickable:hover {
+  background-color: rgba(16, 185, 129, 0.06);
+  outline: 1px dashed rgba(16, 185, 129, 0.35);
+}
+
+/* Interactive Text Segment: Active Green Click State */
+.text-segment-active-green {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+  border: 2px solid #10b981 !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.35) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  margin: -6px -10px !important;
+  position: relative;
+  z-index: 20;
+}
+
+/* Citation Target Highlight (Yellow) */
+@keyframes highlightPulseYellow {
   0% {
-    background-color: rgba(254, 240, 138, 0.9);
+    background-color: rgba(234, 179, 8, 0.35);
+    border-color: #eab308;
   }
   50% {
-    background-color: rgba(253, 224, 71, 0.6);
+    background-color: rgba(234, 179, 8, 0.15);
+    border-color: #ca8a04;
   }
   100% {
-    background-color: rgba(254, 240, 138, 0.4);
+    background-color: rgba(234, 179, 8, 0.35);
+    border-color: #eab308;
   }
 }
 
 .citation-target-highlight {
-  animation: highlightPulse 2s ease-in-out infinite alternate;
-  border-left: 3px solid #eab308;
-  padding-left: 6px;
-  border-radius: 2px;
+  animation: highlightPulseYellow 2.5s ease-in-out infinite alternate;
+  border-left: 4px solid #eab308 !important;
+  padding-left: 10px !important;
+  border-radius: 4px;
+}
+
+/* Bubble Box (Pubblebox) Popover Arrow */
+.pubblebox-arrow-bottom::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 28px;
+  border-width: 8px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+/* High-Tech Document Scanner Laser Line */
+.scanner-laser-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #10b981, #06b6d4, #10b981, transparent);
+  box-shadow: 0 0 15px #10b981, 0 0 30px #06b6d4;
+  z-index: 30;
+}
+
+/* Glassmorphic Panels */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(16, 185, 129, 0.3);
 }
