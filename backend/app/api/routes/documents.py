@@ -83,7 +83,7 @@ async def get_document_status(document_id: str, db: AsyncSession = Depends(get_d
 @router.get("/{document_id}/content")
 async def get_document_content(document_id: str, db: AsyncSession = Depends(get_db)):
     """
-    Serves the raw contract file for in-browser PDF or DOCX rendering.
+    Serves the raw contract file for in-browser PDF or DOCX rendering without triggering download.
     """
     stmt = select(Document).where(Document.id == document_id)
     result = await db.execute(stmt)
@@ -95,8 +95,60 @@ async def get_document_content(document_id: str, db: AsyncSession = Depends(get_
     return FileResponse(
         doc.file_path,
         media_type=media_type,
-        filename=doc.filename
+        content_disposition_type="inline",
+        headers={"Content-Disposition": f'inline; filename="{doc.filename}"'}
     )
+
+@router.get("/{document_id}/pages/{page_number}/image")
+async def get_page_image(document_id: str, page_number: int, db: AsyncSession = Depends(get_db)):
+    """
+    Renders an original PDF page as a high-resolution PNG image for zero-download in-browser viewing.
+    """
+    from fastapi.responses import Response
+    from backend.app.services.pdf_service import PDFService
+
+    stmt = select(Document).where(Document.id == document_id)
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
+    if not doc or not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="Document file not found")
+
+    if doc.file_type != "pdf":
+        raise HTTPException(status_code=400, detail="Page images are only supported for PDF documents")
+
+    try:
+        img_bytes = PDFService.render_page_to_image(doc.file_path, page_number, dpi=150)
+        return Response(content=img_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to render page image: {e}")
+
+@router.get("/{document_id}/pages/{page_number}/info")
+async def get_page_info(document_id: str, page_number: int, db: AsyncSession = Depends(get_db)):
+    """
+    Returns original PDF page dimensions in points for coordinate mapping.
+    """
+    import fitz
+
+    stmt = select(Document).where(Document.id == document_id)
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
+    if not doc or not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="Document file not found")
+
+    doc_fitz = fitz.open(doc.file_path)
+    if page_number < 1 or page_number > len(doc_fitz):
+        doc_fitz.close()
+        raise HTTPException(status_code=404, detail="Page number out of range")
+
+    page = doc_fitz[page_number - 1]
+    width = float(page.rect.width)
+    height = float(page.rect.height)
+    doc_fitz.close()
+
+    return {"page_number": page_number, "width": width, "height": height}
+
 
 @router.get("/{document_id}/clauses", response_model=List[ClauseInfo])
 async def get_document_clauses(document_id: str, db: AsyncSession = Depends(get_db)):

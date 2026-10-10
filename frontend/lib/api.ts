@@ -15,6 +15,17 @@ export function getDocumentContentUrl(id: string): string {
   return `${BACKEND_URL}/api/v1/documents/${id}/content`;
 }
 
+export function getPageImageUrl(id: string, pageNumber: number): string {
+  return `${BACKEND_URL}/api/v1/documents/${id}/pages/${pageNumber}/image`;
+}
+
+export async function getPageInfo(id: string, pageNumber: number): Promise<{ page_number: number; width: number; height: number }> {
+  const res = await fetch(`${BACKEND_URL}/api/v1/documents/${id}/pages/${pageNumber}/info`);
+  if (!res.ok) throw new Error("Failed to load page dimensions");
+  return res.json();
+}
+
+
 export async function checkBackendHealth(): Promise<any> {
   const res = await fetch(`${BACKEND_URL}/api/v1/health`);
   if (!res.ok) throw new Error("Backend service unreachable");

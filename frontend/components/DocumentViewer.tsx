@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { DocumentItem, DocumentSegment, Citation, ClauseInfo } from "@/lib/types";
-import { getDocumentContentUrl } from "@/lib/api";
+import { getPageImageUrl, getPageInfo } from "@/lib/api";
 import {
   Search,
   ChevronLeft,
@@ -11,13 +11,15 @@ import {
   ZoomOut,
   List,
   Highlighter,
-  ExternalLink,
   X,
   MessageSquare,
   Copy,
   FileText,
   MousePointerClick,
-  Check
+  Check,
+  Eye,
+  AlignLeft,
+  ArrowRight
 } from "lucide-react";
 
 interface DocumentViewerProps {
@@ -39,9 +41,12 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [inDocSearch, setInDocSearch] = useState<string>("");
-  const [fontSizePercent, setFontSizePercent] = useState<number>(100);
+  const [zoomPercent, setZoomPercent] = useState<number>(100);
   const [showOutline, setShowOutline] = useState<boolean>(true);
-  const [viewMode, setViewMode] = useState<"structured" | "embed">("structured");
+  const [viewMode, setViewMode] = useState<"original" | "structured">("original");
+
+  // Page Dimensions for Bounding Box Overlay Mapping
+  const [pageInfo, setPageInfo] = useState<{ width: number; height: number } | null>(null);
 
   // Interactive Clicked Segment State
   const [activeSegment, setActiveSegment] = useState<DocumentSegment | null>(null);
@@ -53,6 +58,15 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const segmentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const totalPages = document?.page_count || 1;
+
+  // Fetch page dimensions for bounding box mapping
+  useEffect(() => {
+    if (document && document.file_type === "pdf") {
+      getPageInfo(document.id, currentPage)
+        .then((info) => setPageInfo(info))
+        .catch(() => setPageInfo({ width: 595, height: 842 }));
+    }
+  }, [document?.id, currentPage]);
 
   // Onboarding discovery tip: 5s after document is ready, only once per account
   useEffect(() => {
@@ -123,10 +137,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setTimeout(() => setCopiedSegmentId(null), 2000);
   };
 
-  const handleRedirectToOriginal = (seg: DocumentSegment) => {
+  const handleSwitchToOriginal = (seg: DocumentSegment) => {
     const p = seg.page_number || currentPage;
     setCurrentPage(p);
-    setViewMode("embed");
+    setActiveSegment(seg);
+    setViewMode("original");
   };
 
   return (
@@ -169,8 +184,38 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
         </div>
 
-        {/* Search, Zoom & Original Document Redirect Toggle */}
+        {/* View Mode Toggle, Zoom & Search */}
         <div className="flex items-center gap-3">
+          {/* Mode Switcher: Original Document vs Structured Text */}
+          {document.file_type === "pdf" && (
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+              <button
+                onClick={() => setViewMode("original")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  viewMode === "original"
+                    ? "bg-white text-slate-900 font-semibold shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="View original contract page with interactive green clause highlight box"
+              >
+                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Original Document</span>
+              </button>
+              <button
+                onClick={() => setViewMode("structured")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  viewMode === "structured"
+                    ? "bg-white text-slate-900 font-semibold shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="View clean text layout"
+              >
+                <AlignLeft className="w-3.5 h-3.5 text-slate-600" />
+                <span>Text View</span>
+              </button>
+            </div>
+          )}
+
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
             <input
@@ -184,40 +229,23 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
           <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
             <button
-              onClick={() => setFontSizePercent((f) => Math.max(80, f - 10))}
+              onClick={() => setZoomPercent((f) => Math.max(70, f - 10))}
               className="p-1 text-slate-500 hover:text-slate-900 rounded cursor-pointer"
               title="Zoom out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
             <span className="text-[11px] text-slate-600 font-mono w-9 text-center">
-              {fontSizePercent}%
+              {zoomPercent}%
             </span>
             <button
-              onClick={() => setFontSizePercent((f) => Math.min(150, f + 10))}
+              onClick={() => setZoomPercent((f) => Math.min(150, f + 10))}
               className="p-1 text-slate-500 hover:text-slate-900 rounded cursor-pointer"
               title="Zoom in"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* View mode toggle (Structured vs Original PDF) */}
-          {document.file_type === "pdf" && (
-            <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
-              <button
-                onClick={() => setViewMode(viewMode === "structured" ? "embed" : "structured")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === "embed"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300"
-                }`}
-              >
-                <ExternalLink className="w-3 h-3 text-emerald-600" />
-                <span>{viewMode === "structured" ? "Original PDF View" : "Structured View"}</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -258,6 +286,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   key={idx}
                   onClick={() => {
                     if (clause.page_number) setCurrentPage(clause.page_number);
+                    // Find corresponding segment
+                    const match = segments.find(
+                      (s) =>
+                        (s.page_number === clause.page_number &&
+                          s.section_title?.toLowerCase() === clause.title.toLowerCase()) ||
+                        (s.start_offset <= clause.start_offset && s.end_offset >= clause.start_offset)
+                    );
+                    if (match) setActiveSegment(match);
                   }}
                   className="text-left p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 group cursor-pointer"
                 >
@@ -275,25 +311,133 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
         {/* Document Content View */}
         <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-slate-100/60">
-          {viewMode === "embed" && document.file_type === "pdf" ? (
-            <div className="w-full h-full max-w-4xl bg-white shadow-md rounded-xl border border-slate-200 overflow-hidden flex flex-col">
-              <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-700">
-                <span className="font-semibold flex items-center gap-1.5 text-slate-900">
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  <span>Original PDF File (Direct Binary Render)</span>
-                </span>
-                <span className="text-slate-500">Navigated to Page {currentPage}</span>
-              </div>
-              <iframe
-                src={`${getDocumentContentUrl(document.id)}#page=${currentPage}`}
-                className="w-full flex-1 border-none"
-                title="Original PDF Embed"
+          {viewMode === "original" && document.file_type === "pdf" ? (
+            /* MODE 1: ORIGINAL DOCUMENT PAGE WITH GREEN HIGHLIGHT BOX OVERLAY (ZERO DOWNLOADS) */
+            <div
+              className="relative mx-auto bg-white shadow-md rounded-lg overflow-visible border border-slate-300"
+              style={{
+                width: `${Math.round(750 * (zoomPercent / 100))}px`,
+                maxWidth: "100%",
+              }}
+            >
+              {/* Native Original Rendered Page Image */}
+              <img
+                src={getPageImageUrl(document.id, currentPage)}
+                alt={`Original Document Page ${currentPage}`}
+                className="w-full h-auto block select-none rounded-lg"
               />
+
+              {/* Interactive Bounding Box Overlay Layer */}
+              <div className="absolute inset-0 z-20 pointer-events-auto">
+                {pageSegments.map((segment) => {
+                  let bbox: number[] | null = null;
+                  if (segment.bbox_json) {
+                    try {
+                      bbox = JSON.parse(segment.bbox_json);
+                    } catch (e) {}
+                  }
+                  if (!bbox || bbox.length < 4) return null;
+
+                  const pw = pageInfo?.width || 595;
+                  const ph = pageInfo?.height || 842;
+                  const left = (bbox[0] / pw) * 100;
+                  const top = (bbox[1] / ph) * 100;
+                  const width = ((bbox[2] - bbox[0]) / pw) * 100;
+                  const height = Math.max(1.8, ((bbox[3] - bbox[1]) / ph) * 100);
+
+                  const isSelected = activeSegment?.id === segment.id;
+
+                  return (
+                    <div
+                      key={segment.id}
+                      onClick={() => setActiveSegment(segment)}
+                      className={`absolute transition-all duration-150 cursor-pointer ${
+                        isSelected
+                          ? "z-40 border-2 border-emerald-500 bg-emerald-500/25 rounded-xs shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                          : "z-10 hover:border hover:border-emerald-400 hover:bg-emerald-500/10 rounded-xs"
+                      }`}
+                      style={{
+                        left: `${left}%`,
+                        top: `${top}%`,
+                        width: `${width}%`,
+                        height: `${height}%`,
+                      }}
+                      title={segment.section_title || segment.text.slice(0, 80)}
+                    >
+                      {/* Floating Pubblebox above the green highlight box on the original document */}
+                      {isSelected && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute -top-14 left-0 z-50 bg-white border border-slate-300 rounded-xl px-3.5 py-2 shadow-xl flex items-center gap-3 text-xs text-slate-900 pubblebox-arrow-bottom whitespace-nowrap animate-in fade-in zoom-in-95 duration-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                            <div className="leading-tight">
+                              <span className="font-bold text-slate-900 block text-[11px] truncate max-w-[200px]">
+                                {segment.section_title || `Clause Block #${segment.paragraph_index ?? 0}`}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-500">
+                                [{segment.start_offset}..{segment.end_offset}] • {segment.end_offset - segment.start_offset} chars
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
+                            {onAskAboutClause && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAskAboutClause(segment.text);
+                                }}
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[10px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Analyze this clause in Chat"
+                              >
+                                <MessageSquare className="w-3 h-3 text-slate-600" />
+                                <span>Analyze in Chat</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyText(segment);
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
+                              title="Copy verbatim clause"
+                            >
+                              {copiedSegmentId === segment.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveSegment(null);
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-700 rounded ml-0.5 cursor-pointer"
+                              title="Close box popup"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
+            /* MODE 2: STRUCTURED TEXT VIEW */
             <div
               className="w-full max-w-3xl bg-white shadow-xs border border-slate-200/80 rounded-xl p-10 space-y-6 text-slate-800 relative"
-              style={{ fontSize: `${fontSizePercent}%` }}
+              style={{ fontSize: `${zoomPercent}%` }}
             >
               {/* Document Page Header */}
               <div className="border-b border-slate-200 pb-3 flex items-center justify-between text-xs text-slate-500">
@@ -352,7 +496,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                           : ""
                       }`}
                     >
-                      {/* BUBBLE BOX (PUBBLEBOX) POPOVER: Clean White Card with Drop Shadow */}
+                      {/* BUBBLE BOX (PUBBLEBOX) POPOVER */}
                       {isActiveGreen && (
                         <div className="absolute -top-14 left-2 z-50 bg-white border border-slate-300 rounded-xl px-3.5 py-2 shadow-lg flex items-center gap-3 text-xs text-slate-900 pubblebox-arrow-bottom animate-in fade-in zoom-in-95 duration-100">
                           <div className="flex items-center gap-2">
@@ -368,18 +512,20 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                           </div>
 
                           <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRedirectToOriginal(segment);
-                              }}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-semibold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
-                              title="Redirect and view original PDF"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              <span>Original Document</span>
-                            </button>
+                            {document.file_type === "pdf" && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSwitchToOriginal(segment);
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-semibold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                                title="Highlight in green box on the original document page"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Highlight on Original Page</span>
+                              </button>
+                            )}
 
                             {onAskAboutClause && (
                               <button
@@ -467,7 +613,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed">
-            Click directly on any extracted clause or paragraph! It will highlight in <strong className="text-emerald-700">green</strong>, display its exact character offset indexes <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono">[start..end]</code>, and let you jump directly to the original PDF page.
+            Click directly on any clause on the original document! It will highlight in a <strong className="text-emerald-700">green box</strong> right over the text, display its exact character offset indexes <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono">[start..end]</code>, and let you analyze it in Chat without downloading.
           </p>
 
           <div className="mt-4 flex justify-end">
