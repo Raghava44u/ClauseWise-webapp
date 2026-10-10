@@ -6,31 +6,31 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
 
 ## 📸 Screenshots of Main Screens
 
-### 1. Contract Upload & Library Management
-*Upload PDF and DOCX contracts, view processing status with real-time animated feedback, inspect indexed metadata, and manage your contract library.*
+### 1. Evidence-Grounded Chat & Dynamic Inquiries
+*Ask questions about contracts with streaming responses backed by programmatically verified verbatim source quotes and dynamic inquiries generated specifically from the uploaded document. The Document Viewer tab features a rotating rainbow margin indicator to signal when document processing is complete.*
 
-![Contract Upload and Library](docs/screenshots/01_upload_and_library.png)
-
----
-
-### 2. Evidence-Grounded Chat with Deterministic Verified Quotations
-*Ask questions about contracts with streaming responses backed by programmatically verified verbatim source quotes and dynamic inquiries generated specifically from the uploaded document.*
-
-![Evidence-Grounded Chat with Verified Quotes](docs/screenshots/02_chat_with_verified_quotes.png)
+![Evidence-Grounded Chat and Dynamic Inquiries](docs/screenshots/01_chat_and_dynamic_inquiries.png)
 
 ---
 
-### 3. Deep Citation Navigation & Original Document Highlighting
+### 2. Deep Citation Navigation & Original Document Green Box Highlighting
 *Click any extracted clause or citation card to immediately jump to the source passage in the side-by-side Split View, highlighting the exact text in a glowing green bounding box on the original document page with an interactive character index pubblebox.*
 
-![Citation Navigation & Original Document Highlighting](docs/screenshots/03_citation_and_green_box_highlighting.png)
+![Deep Citation Navigation & Green Box Highlighting](docs/screenshots/02_split_view_green_box_highlighting.png)
 
 ---
 
-### 4. Clause-by-Clause Contract Version Comparison
+### 3. Clause-by-Clause Contract Version Comparison & Numeric Shift Detection
 *Compare baseline and amended contract versions side-by-side with automatic alignment, change classification (Added, Removed, Modified, Unchanged), numeric shift detection (currency caps, notice periods), and legal significance ranking.*
 
-![Contract Version Comparison](docs/screenshots/04_document_comparison.png)
+![Contract Version Comparison](docs/screenshots/03_contract_version_comparison.png)
+
+---
+
+### 4. Autonomous Agentic Document Research (Part C Option 2)
+*Multi-round tool-calling autonomous legal research agent with real-time execution console displaying live model thoughts, tool calls (`get_document_overview`, `list_clauses`, `search_document`, `get_section`), intermediate findings, and final synthesized report.*
+
+![Autonomous Agentic Contract Research](docs/screenshots/04_agentic_contract_research.png)
 
 ---
 
