@@ -27,60 +27,60 @@ export const Header: React.FC<HeaderProps> = ({
   multiSelectCount,
 }) => {
   return (
-    <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-6 shrink-0 z-20">
+    <header className="h-14 border-b border-slate-200 bg-white flex flex-nowrap items-center justify-between px-3 sm:px-6 shrink-0 z-20 overflow-hidden">
       {/* Contract Title & Context Info */}
-      <div className="flex items-center space-x-3 min-w-0">
+      <div className="flex items-center space-x-2.5 min-w-0 mr-2">
         {multiSelectCount > 1 ? (
-          <div className="flex items-center gap-2.5">
-            <span className="p-1.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="p-1.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg shrink-0">
               <Layers className="w-4 h-4" />
             </span>
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900 leading-none">
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 leading-none truncate">
                 Cross-Document Analysis
               </h2>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                {multiSelectCount} contracts selected for comparative review
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate hidden sm:block">
+                {multiSelectCount} contracts selected
               </p>
             </div>
           </div>
         ) : activeDoc ? (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 shrink-0">
               <FileText className="w-4 h-4" />
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-slate-900 truncate max-w-md">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs lg:max-w-md">
                   {activeDoc.filename}
                 </h2>
                 {activeDoc.status === "ready" && (
-                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-semibold flex items-center gap-1">
-                    <FileCheck2 className="w-3 h-3 text-emerald-600" />
+                  <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[9px] font-semibold hidden md:inline-flex items-center gap-0.5 shrink-0">
+                    <FileCheck2 className="w-2.5 h-2.5 text-emerald-600" />
                     <span>Indexed</span>
                   </span>
                 )}
                 {activeDoc.ocr_applied && (
-                  <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-[9px] font-medium">
+                  <span className="px-1 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-[9px] font-medium hidden lg:inline-flex shrink-0">
                     PaddleOCR
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate hidden sm:block">
                 {activeDoc.page_count ? `${activeDoc.page_count} Pages • ` : ""}
                 Quotation Verification Active
               </p>
             </div>
           </div>
         ) : (
-          <div className="text-sm font-medium text-slate-500">
+          <div className="text-xs sm:text-sm font-medium text-slate-500 truncate">
             Select or upload a contract to begin
           </div>
         )}
       </div>
 
       {/* Navigation Tabs */}
-      <nav className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+      <nav className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs shrink-0">
         <button
           onClick={() => onTabChange("chat")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${

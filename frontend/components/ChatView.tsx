@@ -143,9 +143,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs shadow-xs"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                  {msg.content.startsWith("⚠️") ? (
+                    <div className="text-xs text-rose-800 flex items-start gap-2 font-medium bg-rose-50 p-3 rounded-lg border border-rose-200">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{msg.content.replace(/^⚠️\s*/, "")}</span>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                  )}
 
-                  {msg.is_interrupted && (
+                  {msg.is_interrupted && !msg.content.startsWith("⚠️") && (
                     <div className="mt-3 text-xs text-amber-800 flex items-center gap-1.5 font-medium bg-amber-50 p-2 rounded-lg border border-amber-200">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                       <span>Generation stopped by user. Partial analysis preserved.</span>

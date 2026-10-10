@@ -148,13 +148,14 @@ export default function Home() {
   };
 
   const handleSendMessage = async (query: string) => {
-    if (!activeConversation) {
+    let conv = activeConversation;
+    if (!conv) {
       // Create new conversation
-      const conv = await createConversation("Contract Query", selectedDocId || undefined);
+      conv = await createConversation("Contract Query", selectedDocId || undefined);
       setActiveConversation(conv);
     }
 
-    const convId = activeConversation?.id;
+    const convId = conv?.id;
     if (!convId) return;
 
     // Optimistically add user message
@@ -222,6 +223,18 @@ export default function Home() {
             console.error("Chat streaming error:", errMsg);
             setIsStreaming(false);
             setStreamingStatus(null);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `err-${Date.now()}`,
+                conversation_id: convId,
+                role: "assistant",
+                content: `⚠️ Error from AI service: ${errMsg}`,
+                citations: [],
+                is_interrupted: false,
+                created_at: new Date().toISOString(),
+              },
+            ]);
           },
         },
         abortControllerRef.current.signal

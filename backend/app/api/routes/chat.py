@@ -139,6 +139,7 @@ async def stream_chat(
 
         accumulated_text = ""
         is_interrupted = False
+        generation_error = None
 
         try:
             async for chunk in GrokService.stream_chat_completion(
@@ -161,9 +162,9 @@ async def stream_chat(
             is_interrupted = True
             logger.info("Chat stream was cancelled by client.")
         except Exception as err:
-            logger.error(f"Error during Grok chat generation: {err}")
+            logger.error(f"Error during AI chat generation: {err}")
+            generation_error = str(err)
             yield f"event: error\ndata: {json.dumps({'message': str(err)})}\n\n"
-            is_interrupted = True
 
         # Perform deterministic server-side quotation verification
         yield f"event: status\ndata: {json.dumps({'message': 'Verifying quotations against source documents...'})}\n\n"
@@ -181,12 +182,20 @@ async def stream_chat(
 
         yield f"event: citation\ndata: {json.dumps({'citations': verified_citations})}\n\n"
 
+        # Determine final message content
+        if is_interrupted:
+            final_content = accumulated_text or "Generation stopped by user before completion."
+        elif generation_error:
+            final_content = accumulated_text or f"⚠️ Analysis generation could not be completed: {generation_error}"
+        else:
+            final_content = accumulated_text or "Based on the contract text, there is no provision or insufficient evidence regarding this topic."
+
         # Persist assistant message in independent database session
         async with AsyncSessionLocal() as save_db:
             asst_msg = Message(
                 conversation_id=conv.id,
                 role="assistant",
-                content=accumulated_text or ("Generation was cancelled before an answer was formed." if is_interrupted else ""),
+                content=final_content,
                 citations_json=json.dumps(verified_citations),
                 is_interrupted=is_interrupted
             )

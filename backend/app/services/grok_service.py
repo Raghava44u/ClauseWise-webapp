@@ -42,6 +42,31 @@ class GrokService:
         return model
 
     @classmethod
+    def get_candidate_models(cls) -> List[str]:
+        configured = (settings.AI_MODEL or os.environ.get("AI_MODEL", "")).strip()
+        if settings.AI_PROVIDER.lower() == "gemini":
+            candidates = [
+                configured or "gemini-2.5-flash-lite",
+                "gemini-2.5-flash-lite",
+                "gemini-flash-latest",
+                "gemini-2.5-flash",
+                "gemini-2.5-pro"
+            ]
+        else:
+            candidates = [
+                configured or "grok-2-latest",
+                "grok-2-latest",
+                "grok-beta"
+            ]
+        seen = set()
+        result = []
+        for c in candidates:
+            if c and c not in seen:
+                seen.add(c)
+                result.append(c)
+        return result
+
+    @classmethod
     def validate_configuration(cls) -> None:
         key = cls.get_api_key()
         if not key:
@@ -61,51 +86,67 @@ class GrokService:
         timeout: float = 60.0
     ) -> Dict[str, Any]:
         """
-        Sends a standard non-streaming chat completion request to the xAI API.
+        Sends a standard non-streaming chat completion request to the AI provider.
+        Automatically falls back across viable models if 429 or quota limit is encountered.
         """
         cls.validate_configuration()
         api_key = cls.get_api_key()
         base_url = cls.get_base_url()
-        model = cls.get_model_name()
-
-        payload: Dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-        if tools:
-            payload["tools"] = tools
-        if tool_choice:
-            payload["tool_choice"] = tool_choice
+        candidate_models = cls.get_candidate_models()
 
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-
         url = f"{base_url}/chat/completions"
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(url, json=payload, headers=headers)
-                if response.status_code == 401:
-                    raise GrokAPIError("Authentication failed: Invalid xAI API key.", status_code=401)
-                elif response.status_code == 429:
-                    raise GrokAPIError("Rate limit exceeded on xAI API. Please try again shortly.", status_code=429)
-                elif response.status_code >= 400:
-                    err_msg = response.text
-                    try:
-                        err_json = response.json()
-                        err_msg = err_json.get("error", {}).get("message", err_msg)
-                    except Exception:
-                        pass
-                    raise GrokAPIError(f"xAI API Error ({response.status_code}): {err_msg}", status_code=response.status_code)
+        last_error = None
 
-                return response.json()
-        except httpx.TimeoutException:
-            raise GrokAPIError("Request to xAI API timed out.", status_code=504)
-        except httpx.RequestError as e:
-            raise GrokAPIError(f"Network error communicating with xAI API: {e}")
+        for model in candidate_models:
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if tools:
+                payload["tools"] = tools
+            if tool_choice:
+                payload["tool_choice"] = tool_choice
+
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.post(url, json=payload, headers=headers)
+                    if response.status_code == 429:
+                        logger.warning(f"Model {model} hit 429 Rate Limit. Trying next candidate model...")
+                        last_error = GrokAPIError(f"Rate limit exceeded on {model}.", status_code=429)
+                        continue
+                    elif response.status_code == 401:
+                        raise GrokAPIError("Authentication failed: Invalid API key.", status_code=401)
+                    elif response.status_code >= 400:
+                        err_msg = response.text
+                        try:
+                            err_json = response.json()
+                            err_msg = err_json.get("error", {}).get("message", err_msg)
+                        except Exception:
+                            pass
+                        # If resource exhausted or quota error, try next candidate
+                        if "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
+                            logger.warning(f"Model {model} exhausted quota: {err_msg}. Trying fallback...")
+                            last_error = GrokAPIError(f"Quota exhausted on {model}: {err_msg}", status_code=response.status_code)
+                            continue
+                        raise GrokAPIError(f"API Error ({response.status_code}): {err_msg}", status_code=response.status_code)
+
+                    return response.json()
+            except httpx.TimeoutException:
+                last_error = GrokAPIError(f"Request to {model} timed out.", status_code=504)
+                continue
+            except httpx.RequestError as e:
+                last_error = GrokAPIError(f"Network error with {model}: {e}")
+                continue
+
+        if last_error:
+            raise last_error
+        raise GrokAPIError("All candidate AI models failed to respond.")
 
     @classmethod
     async def stream_chat_completion(
@@ -118,72 +159,92 @@ class GrokService:
         timeout: float = 90.0
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Streams chat completions from the xAI API over Server-Sent Events.
-        Yields parsed delta objects containing content chunks and tool calls.
+        Streams chat completions from the AI API over Server-Sent Events.
+        Automatically retries with fallback candidate models if 429 quota exhaustion occurs.
         """
         cls.validate_configuration()
         api_key = cls.get_api_key()
         base_url = cls.get_base_url()
-        model = cls.get_model_name()
-
-        payload: Dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True
-        }
-        if tools:
-            payload["tools"] = tools
-        if tool_choice:
-            payload["tool_choice"] = tool_choice
+        candidate_models = cls.get_candidate_models()
 
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-
         url = f"{base_url}/chat/completions"
+        last_error = None
+        succeeded = False
 
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        for model in candidate_models:
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True
+            }
+            if tools:
+                payload["tools"] = tools
+            if tool_choice:
+                payload["tool_choice"] = tool_choice
+
             try:
-                async with client.stream("POST", url, json=payload, headers=headers) as response:
-                    if response.status_code == 401:
-                        raise GrokAPIError("Authentication failed: Invalid xAI API key.", status_code=401)
-                    elif response.status_code == 429:
-                        raise GrokAPIError("Rate limit exceeded on xAI API.", status_code=429)
-                    elif response.status_code >= 400:
-                        body = await response.aread()
-                        raise GrokAPIError(f"xAI API Error ({response.status_code}): {body.decode(errors='ignore')}", status_code=response.status_code)
-
-                    buffer = ""
-                    async for chunk in response.aiter_text():
-                        buffer += chunk
-                        while "\n" in buffer:
-                            line, buffer = buffer.split("\n", 1)
-                            line = line.strip()
-                            if not line or line.startswith(":"):
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    async with client.stream("POST", url, json=payload, headers=headers) as response:
+                        if response.status_code == 429:
+                            logger.warning(f"Streaming: Model {model} hit 429 Rate Limit. Trying next candidate...")
+                            last_error = GrokAPIError(f"Rate limit exceeded on {model}.", status_code=429)
+                            continue
+                        elif response.status_code == 401:
+                            raise GrokAPIError("Authentication failed: Invalid API key.", status_code=401)
+                        elif response.status_code >= 400:
+                            body = await response.aread()
+                            err_text = body.decode(errors="ignore")
+                            if "RESOURCE_EXHAUSTED" in err_text or "quota" in err_text.lower():
+                                logger.warning(f"Streaming: Model {model} quota exhausted. Trying next candidate...")
+                                last_error = GrokAPIError(f"Quota exhausted on {model}.", status_code=response.status_code)
                                 continue
-                            if line.startswith("data: "):
-                                data_str = line[6:].strip()
-                                if data_str == "[DONE]":
-                                    yield {"done": True}
-                                    return
-                                try:
-                                    data_obj = json.loads(data_str)
-                                    choices = data_obj.get("choices", [])
-                                    if choices:
-                                        delta = choices[0].get("delta", {})
-                                        finish_reason = choices[0].get("finish_reason")
-                                        yield {
-                                            "content": delta.get("content", ""),
-                                            "tool_calls": delta.get("tool_calls", None),
-                                            "finish_reason": finish_reason,
-                                            "done": False
-                                        }
-                                except json.JSONDecodeError:
+                            raise GrokAPIError(f"API Error ({response.status_code}): {err_text}", status_code=response.status_code)
+
+                        buffer = ""
+                        async for chunk in response.aiter_text():
+                            buffer += chunk
+                            while "\n" in buffer:
+                                line, buffer = buffer.split("\n", 1)
+                                line = line.strip()
+                                if not line or line.startswith(":"):
                                     continue
+                                if line.startswith("data: "):
+                                    data_str = line[6:].strip()
+                                    if data_str == "[DONE]":
+                                        yield {"done": True}
+                                        return
+                                    try:
+                                        data_obj = json.loads(data_str)
+                                        choices = data_obj.get("choices", [])
+                                        if choices:
+                                            delta = choices[0].get("delta", {})
+                                            finish_reason = choices[0].get("finish_reason")
+                                            yield {
+                                                "content": delta.get("content", ""),
+                                                "tool_calls": delta.get("tool_calls", None),
+                                                "finish_reason": finish_reason,
+                                                "done": False
+                                            }
+                                    except json.JSONDecodeError:
+                                        continue
+                        succeeded = True
+                        return
+            except GrokAPIError:
+                raise
             except httpx.TimeoutException:
-                raise GrokAPIError("Streaming request to xAI API timed out.", status_code=504)
+                last_error = GrokAPIError(f"Streaming request to {model} timed out.", status_code=504)
+                continue
             except httpx.RequestError as e:
-                raise GrokAPIError(f"Streaming network error with xAI API: {e}")
+                last_error = GrokAPIError(f"Streaming network error with {model}: {e}")
+                continue
+
+        if not succeeded:
+            if last_error:
+                raise last_error
+            raise GrokAPIError("All candidate AI models failed to stream response.")
