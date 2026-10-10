@@ -221,7 +221,7 @@ class CitationService:
         for pat in patterns:
             for match in re.finditer(pat, text_with_citations):
                 q = match.group(1).strip()
-                if len(q) >= 15:  # meaningful quote length
+                if len(q) >= 6:  # meaningful quote length
                     found_quotes.add(q)
 
         results = []

@@ -4,10 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 class Settings(BaseSettings):
-    AI_PROVIDER: str = "xai"
+    AI_PROVIDER: str = "gemini"
     AI_API_KEY: str = ""
-    AI_BASE_URL: str = "https://api.x.ai/v1"
-    AI_MODEL: str = "grok-2-latest"
+    AI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    AI_MODEL: str = "gemini-2.5-flash"
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./clausewise.db"
     

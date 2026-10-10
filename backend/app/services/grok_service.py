@@ -23,20 +23,31 @@ class GrokService:
 
     @staticmethod
     def get_base_url() -> str:
-        url = (settings.AI_BASE_URL or os.environ.get("AI_BASE_URL", "https://api.x.ai/v1")).rstrip("/")
+        url = (settings.AI_BASE_URL or os.environ.get("AI_BASE_URL", "")).rstrip("/")
+        if not url:
+            if settings.AI_PROVIDER.lower() == "gemini":
+                url = "https://generativelanguage.googleapis.com/v1beta/openai"
+            else:
+                url = "https://api.x.ai/v1"
         return url
 
     @staticmethod
     def get_model_name() -> str:
-        model = (settings.AI_MODEL or os.environ.get("AI_MODEL", "grok-2-latest")).strip()
+        model = (settings.AI_MODEL or os.environ.get("AI_MODEL", "")).strip()
+        if not model:
+            if settings.AI_PROVIDER.lower() == "gemini":
+                model = "gemini-2.5-flash"
+            else:
+                model = "grok-2-latest"
         return model
 
     @classmethod
     def validate_configuration(cls) -> None:
         key = cls.get_api_key()
         if not key:
+            provider_name = "Gemini" if settings.AI_PROVIDER.lower() == "gemini" else "xAI"
             raise GrokConfigurationError(
-                "xAI API key is missing. Please set AI_API_KEY in .env.local (development) or environment variables (Render)."
+                f"{provider_name} API key is missing. Please set AI_API_KEY in .env.local (development) or environment variables (Render)."
             )
 
     @classmethod
