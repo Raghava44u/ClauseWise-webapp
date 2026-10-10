@@ -13,7 +13,8 @@ import {
   Loader2,
   Bot,
   User,
-  ArrowUpRight
+  ArrowUpRight,
+  Layers
 } from "lucide-react";
 
 interface ChatViewProps {
@@ -29,6 +30,9 @@ interface ChatViewProps {
   isMultiDoc?: boolean;
   suggestedQuestions?: string[];
   loadingQuestions?: boolean;
+  allDocumentsCount?: number;
+  queryScope?: "current" | "all";
+  onScopeChange?: (scope: "current" | "all") => void;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -44,6 +48,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   isMultiDoc = false,
   suggestedQuestions = [],
   loadingQuestions = false,
+  allDocumentsCount = 1,
+  queryScope = "current",
+  onScopeChange,
 }) => {
   const [inputQuery, setInputQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -279,15 +286,65 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Input Box Footer */}
       <div className="p-4 bg-white border-t border-slate-200">
+        {/* Scope Selector: Single Contract vs All Contracts */}
+        {allDocumentsCount > 1 && (
+          <div className="flex items-center justify-between mb-2.5 max-w-4xl mx-auto px-1">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="font-semibold text-[11px] text-slate-400 uppercase tracking-wider">
+                Target:
+              </span>
+              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => onScopeChange?.("current")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                    queryScope === "current"
+                      ? "bg-white text-slate-900 font-semibold shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  title={`Query only ${documentTitle || "active contract"}`}
+                >
+                  <FileText className="w-3 h-3 text-slate-500" />
+                  <span className="truncate max-w-[150px] sm:max-w-[200px]">
+                    {documentTitle || "Current Document"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onScopeChange?.("all")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                    queryScope === "all"
+                      ? "bg-emerald-600 text-white font-semibold shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  title={`Query across all ${allDocumentsCount} uploaded documents in library`}
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>All Documents ({allDocumentsCount})</span>
+                </button>
+              </div>
+            </div>
+
+            {queryScope === "all" && (
+              <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-medium hidden sm:inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Cross-examining all {allDocumentsCount} documents</span>
+              </span>
+            )}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="relative flex items-center gap-2 max-w-4xl mx-auto">
           <input
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
             placeholder={
-              isMultiDoc
+              queryScope === "all"
+                ? `Ask anything across all ${allDocumentsCount} documents (e.g. compare terms, what do they say, who are they)...`
+                : isMultiDoc
                 ? "Ask a question comparing selected contracts..."
-                : "Ask anything about this contract (e.g. liabilities, indemnity, payment terms)..."
+                : `Ask anything about ${documentTitle || "this document"} (e.g. what does it tell about, what is his name, liabilities)...`
             }
             disabled={isStreaming}
             className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white text-slate-900 placeholder-slate-400 disabled:opacity-50 transition-all font-sans shadow-2xs"

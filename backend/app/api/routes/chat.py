@@ -47,7 +47,13 @@ async def stream_chat(
         doc_ids = [conv.document_id]
 
     if not doc_ids:
-        raise HTTPException(status_code=400, detail="No document associated with this conversation.")
+        # Fallback to querying all available documents in the library
+        all_docs_stmt = select(Document.id)
+        all_docs_res = await db.execute(all_docs_stmt)
+        doc_ids = [row[0] for row in all_docs_res.all()]
+
+    if not doc_ids:
+        raise HTTPException(status_code=400, detail="No documents uploaded yet. Please upload a contract first.")
 
     # Fetch document records
     docs_stmt = select(Document).where(Document.id.in_(doc_ids))
@@ -95,17 +101,17 @@ async def stream_chat(
     async def event_generator():
         yield f"event: status\ndata: {json.dumps({'message': 'Searching document passages via BM25 index...'})}\n\n"
 
-        # Multi-document retrieval
+        # Multi-document retrieval across all target documents
         search_res = RetrievalService.search_multiple_documents(
             query=req.query,
             documents_data=docs_data,
-            top_k_per_doc=5,
-            total_token_budget=3500
+            top_k_per_doc=6,
+            total_token_budget=3600
         )
         retrieved_segments = search_res.get("segments", [])
 
         if not retrieved_segments:
-            yield f"event: status\ndata: {json.dumps({'message': 'No directly matching clauses found. Consulting full document index...'})}\n\n"
+            yield f"event: status\ndata: {json.dumps({'message': 'Analyzing full document index...'})}\n\n"
 
         # Format context for Grok
         context_blocks = []
@@ -119,16 +125,19 @@ async def stream_chat(
         context_text = "\n\n---\n\n".join(context_blocks)
 
         system_prompt = (
-            "You are ClauseWise, an elite legal contract analysis AI. "
-            "You are assisting a legal counsel with questions about contract provisions. "
-            "Follow these mandatory requirements:\n"
-            "1. Ground all answers solely on the provided contract excerpts.\n"
-            "2. Support every key claim with the exact verbatim quotation enclosed in quotes (\"...\").\n"
-            "3. State which document and page number the quote comes from.\n"
-            "4. If the contract does not contain the answer or evidence is insufficient, state clearly: "
+            "You are ClauseWise, an elite legal contract and document intelligence AI assistant. "
+            "You are assisting a user or legal counsel with analysis of the uploaded document(s) (contracts, agreements, resumes, policies). "
+            "The extracted text of the document(s) is provided below under RELEVANT DOCUMENT EXCERPTS.\n\n"
+            "Follow these mandatory guidelines:\n"
+            "1. Ground all answers directly on the provided document excerpts below.\n"
+            "2. When the user asks general or overview questions (such as 'what does this pdf tell about?', 'what is it all about?', 'what is his name?', 'who is this?', 'summarize this document'), "
+            "provide a direct, comprehensive, and helpful answer summarizing the document's subject, purpose, parties/person, or background based on the provided excerpts.\n"
+            "3. When answering specific contractual or factual questions, support every key claim with the exact verbatim quotation enclosed in double quotes (\"...\") and state which document and page number the quote comes from.\n"
+            "4. If multiple documents are included in the excerpts, synthesize evidence across ALL of them, comparing and contrasting their provisions, and clearly attribute each finding to its originating document (e.g., [Document: filename]).\n"
+            "5. If the provided excerpts genuinely lack information on the topic after exhaustive review, state clearly: "
             "'Based on the contract text, there is no provision or insufficient evidence regarding this topic.'\n"
-            "5. Never invent, extrapolate, or misquote contractual terms.\n\n"
-            f"--- RELEVANT CONTRACT EXCERPTS ---\n{context_text}\n--- END EXCERPTS ---"
+            "6. Never claim you cannot read or access PDF files or external documents; the text has already been parsed and provided to you below.\n\n"
+            f"--- RELEVANT DOCUMENT EXCERPTS ---\n{context_text}\n--- END EXCERPTS ---"
         )
 
         model_messages = [{"role": "system", "content": system_prompt}]

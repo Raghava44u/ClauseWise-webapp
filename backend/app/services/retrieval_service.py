@@ -90,6 +90,31 @@ class RetrievalService:
             if len(selected_segments) >= top_k:
                 break
 
+        # Overview / general intent query terms (e.g. "what is this about?", "what does that pdf tells about?", "what is his name?", "who is this?")
+        overview_terms = {
+            "what", "who", "tell", "tells", "about", "all", "summary", "summarize",
+            "overview", "explain", "describe", "pdf", "document", "name", "title",
+            "subject", "parties", "party", "person", "purpose", "scope", "main", "content"
+        }
+        is_overview_query = any(t in overview_terms for t in query_tokens)
+
+        # Fallback: if no specific keyword matches were found, OR if this is an overview query needing context
+        if not selected_segments or (is_overview_query and len(selected_segments) < top_k):
+            # Collect representative segments from document start (title, preamble, recitals, intro)
+            existing_ids = {s.get("id") for s in selected_segments}
+            for seg in segments:
+                if seg.get("id") in existing_ids:
+                    continue
+                seg_len = len(seg.get("text", ""))
+                if estimated_chars + seg_len > max_chars and selected_segments:
+                    break
+                seg_copy = dict(seg)
+                seg_copy["relevance_score"] = 0.5 if is_overview_query else 0.1
+                selected_segments.append(seg_copy)
+                estimated_chars += seg_len
+                if len(selected_segments) >= top_k:
+                    break
+
         evidence_found = len(selected_segments) > 0
         return {
             "status": "evidence_retrieved" if evidence_found else "no_relevant_evidence",

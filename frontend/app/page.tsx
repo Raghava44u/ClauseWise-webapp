@@ -55,6 +55,7 @@ export default function Home() {
   const [streamingCitations, setStreamingCitations] = useState<Citation[]>([]);
   const [streamingStatus, setStreamingStatus] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const [queryScope, setQueryScope] = useState<"current" | "all">("current");
 
   // Highlighting citation state
   const [highlightCitation, setHighlightCitation] = useState<Citation | null>(null);
@@ -178,11 +179,13 @@ export default function Home() {
     abortControllerRef.current = new AbortController();
 
     const targetDocIds =
-      isMultiSelectMode && multiSelectIds.length > 0
+      queryScope === "all"
+        ? documents.map((d) => d.id)
+        : isMultiSelectMode && multiSelectIds.length > 0
         ? multiSelectIds
         : selectedDocId
         ? [selectedDocId]
-        : [];
+        : documents.map((d) => d.id);
 
     let accumulatedText = "";
     let finalCitations: Citation[] = [];
@@ -304,9 +307,12 @@ export default function Home() {
               onStopGeneration={handleStopGeneration}
               onCitationClick={handleCitationClick}
               documentTitle={activeDoc?.filename}
-              isMultiDoc={isMultiSelectMode && multiSelectIds.length > 1}
+              isMultiDoc={queryScope === "all" || (isMultiSelectMode && multiSelectIds.length > 1)}
               suggestedQuestions={suggestedQuestions}
               loadingQuestions={loadingQuestions}
+              allDocumentsCount={documents.length}
+              queryScope={queryScope}
+              onScopeChange={setQueryScope}
             />
           )}
 
