@@ -19,7 +19,9 @@ import {
   Check,
   Eye,
   AlignLeft,
-  ArrowRight
+  Columns,
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 
 interface DocumentViewerProps {
@@ -30,6 +32,8 @@ interface DocumentViewerProps {
   onClearHighlight: () => void;
   onAskAboutClause?: (clauseText: string) => void;
 }
+
+export type ViewLayoutMode = "split" | "extracted" | "original";
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   document,
@@ -43,12 +47,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [inDocSearch, setInDocSearch] = useState<string>("");
   const [zoomPercent, setZoomPercent] = useState<number>(100);
   const [showOutline, setShowOutline] = useState<boolean>(true);
-  const [viewMode, setViewMode] = useState<"original" | "structured">("original");
+  
+  // Default to Split View on desktop so user sees Extracted Text on Left & Original Document on Right!
+  const [layoutMode, setLayoutMode] = useState<ViewLayoutMode>("split");
 
   // Page Dimensions for Bounding Box Overlay Mapping
   const [pageInfo, setPageInfo] = useState<{ width: number; height: number } | null>(null);
 
-  // Interactive Clicked Segment State
+  // Active Clicked Segment State
   const [activeSegment, setActiveSegment] = useState<DocumentSegment | null>(null);
   const [copiedSegmentId, setCopiedSegmentId] = useState<string | null>(null);
 
@@ -56,10 +62,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [showOnboardingTip, setShowOnboardingTip] = useState<boolean>(false);
 
   const segmentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const originalOverlayRef = useRef<HTMLDivElement | null>(null);
 
   const totalPages = document?.page_count || 1;
 
-  // Fetch page dimensions for bounding box mapping
+  // Fetch page dimensions for coordinate mapping
   useEffect(() => {
     if (document && document.file_type === "pdf") {
       getPageInfo(document.id, currentPage)
@@ -137,11 +144,15 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setTimeout(() => setCopiedSegmentId(null), 2000);
   };
 
-  const handleSwitchToOriginal = (seg: DocumentSegment) => {
-    const p = seg.page_number || currentPage;
-    setCurrentPage(p);
+  const handleSelectSegment = (seg: DocumentSegment) => {
     setActiveSegment(seg);
-    setViewMode("original");
+    if (seg.page_number && seg.page_number !== currentPage) {
+      setCurrentPage(seg.page_number);
+    }
+    // If currently in extracted-only mode on mobile/narrow screen, switch to split view so user sees the green box on original
+    if (layoutMode === "extracted") {
+      setLayoutMode("split");
+    }
   };
 
   return (
@@ -184,37 +195,49 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
         </div>
 
-        {/* View Mode Toggle, Zoom & Search */}
+        {/* View Mode Switcher, Zoom & Search */}
         <div className="flex items-center gap-3">
-          {/* Mode Switcher: Original Document vs Structured Text */}
-          {document.file_type === "pdf" && (
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+          {/* Mode Switcher: Split View (Both) vs Extracted Text vs Original Document */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+            <button
+              onClick={() => setLayoutMode("split")}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                layoutMode === "split"
+                  ? "bg-white text-slate-900 font-semibold shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+              title="View Extracted Text and Original Document side-by-side"
+            >
+              <Columns className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Split View</span>
+            </button>
+            <button
+              onClick={() => setLayoutMode("extracted")}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                layoutMode === "extracted"
+                  ? "bg-white text-slate-900 font-semibold shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+              title="View parsed text"
+            >
+              <AlignLeft className="w-3.5 h-3.5 text-slate-600" />
+              <span>Extracted Text</span>
+            </button>
+            {document.file_type === "pdf" && (
               <button
-                onClick={() => setViewMode("original")}
+                onClick={() => setLayoutMode("original")}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                  viewMode === "original"
+                  layoutMode === "original"
                     ? "bg-white text-slate-900 font-semibold shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
-                title="View original contract page with interactive green clause highlight box"
+                title="View original contract page"
               >
                 <Eye className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Original Document</span>
               </button>
-              <button
-                onClick={() => setViewMode("structured")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
-                  viewMode === "structured"
-                    ? "bg-white text-slate-900 font-semibold shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-                title="View clean text layout"
-              >
-                <AlignLeft className="w-3.5 h-3.5 text-slate-600" />
-                <span>Text View</span>
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
@@ -286,14 +309,13 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   key={idx}
                   onClick={() => {
                     if (clause.page_number) setCurrentPage(clause.page_number);
-                    // Find corresponding segment
                     const match = segments.find(
                       (s) =>
                         (s.page_number === clause.page_number &&
                           s.section_title?.toLowerCase() === clause.title.toLowerCase()) ||
                         (s.start_offset <= clause.start_offset && s.end_offset >= clause.start_offset)
                     );
-                    if (match) setActiveSegment(match);
+                    if (match) handleSelectSegment(match);
                   }}
                   className="text-left p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 group cursor-pointer"
                 >
@@ -309,284 +331,294 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </aside>
         )}
 
-        {/* Document Content View */}
-        <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-slate-100/60">
-          {viewMode === "original" && document.file_type === "pdf" ? (
-            /* MODE 1: ORIGINAL DOCUMENT PAGE WITH GREEN HIGHLIGHT BOX OVERLAY (ZERO DOWNLOADS) */
+        {/* WORKSPACE AREA: Dynamic Layout (Split, Extracted Only, Original Only) */}
+        <div className="flex-1 overflow-y-auto p-5 flex gap-6 bg-slate-100/60 justify-center">
+          
+          {/* PANEL 1: EXTRACTED TEXT & STRUCTURED CLAUSES */}
+          {(layoutMode === "split" || layoutMode === "extracted") && (
             <div
-              className="relative mx-auto bg-white shadow-md rounded-lg overflow-visible border border-slate-300"
-              style={{
-                width: `${Math.round(750 * (zoomPercent / 100))}px`,
-                maxWidth: "100%",
-              }}
+              className={`flex-1 flex flex-col space-y-4 ${
+                layoutMode === "split" ? "max-w-2xl min-w-[340px]" : "max-w-3xl mx-auto"
+              }`}
             >
-              {/* Native Original Rendered Page Image */}
-              <img
-                src={getPageImageUrl(document.id, currentPage)}
-                alt={`Original Document Page ${currentPage}`}
-                className="w-full h-auto block select-none rounded-lg"
-              />
+              {/* Header Badge */}
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between shadow-2xs">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <AlignLeft className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Extracted Text & Structured Clauses</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Click any extracted clause below to highlight it in a green box on the original document.
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                  Page {currentPage}
+                </span>
+              </div>
 
-              {/* Interactive Bounding Box Overlay Layer */}
-              <div className="absolute inset-0 z-20 pointer-events-auto">
-                {pageSegments.map((segment) => {
-                  let bbox: number[] | null = null;
-                  if (segment.bbox_json) {
-                    try {
-                      bbox = JSON.parse(segment.bbox_json);
-                    } catch (e) {}
-                  }
-                  if (!bbox || bbox.length < 4) return null;
+              {/* List of Extracted Clauses on Current Page */}
+              <div className="space-y-3 pb-8">
+                {pageSegments.length === 0 ? (
+                  <div className="text-center py-16 text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
+                    No text extracted on page {currentPage}.
+                  </div>
+                ) : (
+                  pageSegments.map((segment) => {
+                    const isActive = activeSegment?.id === segment.id;
 
-                  const pw = pageInfo?.width || 595;
-                  const ph = pageInfo?.height || 842;
-                  const left = (bbox[0] / pw) * 100;
-                  const top = (bbox[1] / ph) * 100;
-                  const width = ((bbox[2] - bbox[0]) / pw) * 100;
-                  const height = Math.max(1.8, ((bbox[3] - bbox[1]) / ph) * 100);
+                    // In-doc search highlight
+                    let displayText: React.ReactNode = segment.text;
+                    if (inDocSearch.trim()) {
+                      const parts = segment.text.split(new RegExp(`(${inDocSearch})`, "gi"));
+                      displayText = parts.map((part, pIdx) =>
+                        part.toLowerCase() === inDocSearch.toLowerCase() ? (
+                          <mark key={pIdx} className="bg-emerald-100 text-emerald-900 rounded px-1">
+                            {part}
+                          </mark>
+                        ) : (
+                          part
+                        )
+                      );
+                    }
 
-                  const isSelected = activeSegment?.id === segment.id;
-
-                  return (
-                    <div
-                      key={segment.id}
-                      onClick={() => setActiveSegment(segment)}
-                      className={`absolute transition-all duration-150 cursor-pointer ${
-                        isSelected
-                          ? "z-40 border-2 border-emerald-500 bg-emerald-500/25 rounded-xs shadow-[0_0_12px_rgba(16,185,129,0.5)]"
-                          : "z-10 hover:border hover:border-emerald-400 hover:bg-emerald-500/10 rounded-xs"
-                      }`}
-                      style={{
-                        left: `${left}%`,
-                        top: `${top}%`,
-                        width: `${width}%`,
-                        height: `${height}%`,
-                      }}
-                      title={segment.section_title || segment.text.slice(0, 80)}
-                    >
-                      {/* Floating Pubblebox above the green highlight box on the original document */}
-                      {isSelected && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute -top-14 left-0 z-50 bg-white border border-slate-300 rounded-xl px-3.5 py-2 shadow-xl flex items-center gap-3 text-xs text-slate-900 pubblebox-arrow-bottom whitespace-nowrap animate-in fade-in zoom-in-95 duration-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                            <div className="leading-tight">
-                              <span className="font-bold text-slate-900 block text-[11px] truncate max-w-[200px]">
-                                {segment.section_title || `Clause Block #${segment.paragraph_index ?? 0}`}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-500">
-                                [{segment.start_offset}..{segment.end_offset}] • {segment.end_offset - segment.start_offset} chars
-                              </span>
-                            </div>
+                    return (
+                      <div
+                        key={segment.id}
+                        ref={(el) => {
+                          segmentRefs.current[segment.id] = el;
+                        }}
+                        onClick={() => handleSelectSegment(segment)}
+                        className={`p-4 rounded-xl border transition-all cursor-pointer relative ${
+                          isActive
+                            ? "bg-emerald-50/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30"
+                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs"
+                        }`}
+                      >
+                        {/* Segment Card Header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                isActive ? "bg-emerald-600 animate-pulse" : "bg-slate-400"
+                              }`}
+                            />
+                            <h4
+                              className={`text-xs font-bold truncate ${
+                                isActive ? "text-emerald-900" : "text-slate-800"
+                              }`}
+                            >
+                              {segment.section_title || `Clause Block #${segment.paragraph_index ?? 0}`}
+                            </h4>
                           </div>
 
-                          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
-                            {onAskAboutClause && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                              [{segment.start_offset}..{segment.end_offset}]
+                            </span>
+                            <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-0.5 bg-emerald-100/60 px-1.5 py-0.5 rounded">
+                              <span>Refer Original</span>
+                              <ArrowRight className="w-2.5 h-2.5" />
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Extracted Text Body */}
+                        <p className="text-xs leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
+                          {displayText}
+                        </p>
+
+                        {/* Quick Action Toolbar inside card when active */}
+                        {isActive && (
+                          <div className="mt-3 pt-2.5 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+                            <span className="text-[10px] text-emerald-800 font-medium">
+                              Highlighted in green on original document →
+                            </span>
+
+                            <div className="flex items-center gap-1.5">
+                              {onAskAboutClause && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAskAboutClause(segment.text);
+                                  }}
+                                  className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-md text-[10px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <MessageSquare className="w-3 h-3 text-slate-600" />
+                                  <span>Analyze in Chat</span>
+                                </button>
+                              )}
+
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onAskAboutClause(segment.text);
+                                  handleCopyText(segment);
                                 }}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[10px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                                title="Analyze this clause in Chat"
+                                className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
+                                title="Copy clause"
                               >
-                                <MessageSquare className="w-3 h-3 text-slate-600" />
-                                <span>Analyze in Chat</span>
+                                {copiedSegmentId === segment.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
                               </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopyText(segment);
-                              }}
-                              className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                              title="Copy verbatim clause"
-                            >
-                              {copiedSegmentId === segment.id ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveSegment(null);
-                              }}
-                              className="p-1 text-slate-400 hover:text-slate-700 rounded ml-0.5 cursor-pointer"
-                              title="Close box popup"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
-          ) : (
-            /* MODE 2: STRUCTURED TEXT VIEW */
+          )}
+
+          {/* PANEL 2: ORIGINAL CONTRACT DOCUMENT WITH GREEN HIGHLIGHT BOX (ZERO DOWNLOADS) */}
+          {(layoutMode === "split" || layoutMode === "original") && document.file_type === "pdf" && (
             <div
-              className="w-full max-w-3xl bg-white shadow-xs border border-slate-200/80 rounded-xl p-10 space-y-6 text-slate-800 relative"
-              style={{ fontSize: `${zoomPercent}%` }}
+              className={`flex-1 flex flex-col space-y-4 ${
+                layoutMode === "split" ? "max-w-2xl min-w-[340px]" : "max-w-3xl mx-auto"
+              }`}
             >
-              {/* Document Page Header */}
-              <div className="border-b border-slate-200 pb-3 flex items-center justify-between text-xs text-slate-500">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
-                    {document.filename}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
-                    Click text to inspect offsets
-                  </span>
+              {/* Header Badge */}
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between shadow-2xs">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Original Contract Document (Referenced Source)</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Direct high-resolution render. Clauses highlight in a green box.
+                  </p>
                 </div>
-                <span className="font-mono text-slate-400">Page {currentPage} of {totalPages}</span>
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Zero Downloads
+                </span>
               </div>
 
-              {pageSegments.length === 0 ? (
-                <div className="text-center py-16 text-slate-400 text-xs">
-                  No text passages recorded on page {currentPage}.
-                </div>
-              ) : (
-                pageSegments.map((segment) => {
-                  const isActiveGreen = activeSegment?.id === segment.id;
-                  const isHighlightedCitation =
-                    highlightCitation &&
-                    ((highlightCitation.start_offset !== undefined &&
-                      segment.start_offset <= highlightCitation.start_offset &&
-                      segment.end_offset >= highlightCitation.start_offset) ||
-                      segment.text.includes(highlightCitation.quote.slice(0, 30)));
+              {/* Native Original Rendered Page Image with Green Bounding Box Overlay */}
+              <div
+                ref={originalOverlayRef}
+                className="relative mx-auto bg-white shadow-md rounded-lg overflow-visible border border-slate-300 w-full"
+                style={{
+                  maxWidth: `${Math.round(750 * (zoomPercent / 100))}px`,
+                }}
+              >
+                <img
+                  src={getPageImageUrl(document.id, currentPage)}
+                  alt={`Original Contract Page ${currentPage}`}
+                  className="w-full h-auto block select-none rounded-lg"
+                />
 
-                  // In-doc search highlight
-                  let displayText: React.ReactNode = segment.text;
-                  if (inDocSearch.trim()) {
-                    const parts = segment.text.split(new RegExp(`(${inDocSearch})`, "gi"));
-                    displayText = parts.map((part, pIdx) =>
-                      part.toLowerCase() === inDocSearch.toLowerCase() ? (
-                        <mark key={pIdx} className="bg-emerald-100 text-emerald-900 rounded px-1">
-                          {part}
-                        </mark>
-                      ) : (
-                        part
-                      )
-                    );
-                  }
+                {/* Interactive Bounding Box Overlay Layer */}
+                <div className="absolute inset-0 z-20 pointer-events-auto">
+                  {pageSegments.map((segment) => {
+                    let bbox: number[] | null = null;
+                    if (segment.bbox_json) {
+                      try {
+                        bbox = JSON.parse(segment.bbox_json);
+                      } catch (e) {}
+                    }
+                    if (!bbox || bbox.length < 4) return null;
 
-                  return (
-                    <div
-                      key={segment.id}
-                      ref={(el) => {
-                        segmentRefs.current[segment.id] = el;
-                      }}
-                      onClick={() => setActiveSegment(segment)}
-                      className={`text-segment-clickable relative transition-all duration-150 group ${
-                        isActiveGreen
-                          ? "text-segment-active-green"
-                          : isHighlightedCitation
-                          ? "citation-target-highlight bg-amber-50"
-                          : ""
-                      }`}
-                    >
-                      {/* BUBBLE BOX (PUBBLEBOX) POPOVER */}
-                      {isActiveGreen && (
-                        <div className="absolute -top-14 left-2 z-50 bg-white border border-slate-300 rounded-xl px-3.5 py-2 shadow-lg flex items-center gap-3 text-xs text-slate-900 pubblebox-arrow-bottom animate-in fade-in zoom-in-95 duration-100">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                            <div className="leading-tight">
-                              <span className="font-bold text-slate-900 block text-[11px]">
-                                {segment.section_title || `Clause Block #${segment.paragraph_index ?? 0}`}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-500">
-                                Start: [{segment.start_offset}] • End: [{segment.end_offset}] • {segment.end_offset - segment.start_offset} chars
-                              </span>
+                    const pw = pageInfo?.width || 595;
+                    const ph = pageInfo?.height || 842;
+                    const left = (bbox[0] / pw) * 100;
+                    const top = (bbox[1] / ph) * 100;
+                    const width = ((bbox[2] - bbox[0]) / pw) * 100;
+                    const height = Math.max(1.8, ((bbox[3] - bbox[1]) / ph) * 100);
+
+                    const isSelected = activeSegment?.id === segment.id;
+
+                    return (
+                      <div
+                        key={segment.id}
+                        onClick={() => handleSelectSegment(segment)}
+                        className={`absolute transition-all duration-150 cursor-pointer ${
+                          isSelected
+                            ? "z-40 border-2 border-emerald-500 bg-emerald-500/25 rounded-xs shadow-[0_0_14px_rgba(16,185,129,0.5)] ring-1 ring-emerald-500"
+                            : "z-10 hover:border hover:border-emerald-400 hover:bg-emerald-500/10 rounded-xs"
+                        }`}
+                        style={{
+                          left: `${left}%`,
+                          top: `${top}%`,
+                          width: `${width}%`,
+                          height: `${height}%`,
+                        }}
+                        title={segment.section_title || segment.text.slice(0, 80)}
+                      >
+                        {/* Floating Pubblebox above the green highlight box on the original document */}
+                        {isSelected && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute -top-14 left-0 z-50 bg-white border border-slate-300 rounded-xl px-3.5 py-2 shadow-xl flex items-center gap-3 text-xs text-slate-900 pubblebox-arrow-bottom whitespace-nowrap animate-in fade-in zoom-in-95 duration-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                              <div className="leading-tight">
+                                <span className="font-bold text-slate-900 block text-[11px] truncate max-w-[200px]">
+                                  {segment.section_title || `Clause Block #${segment.paragraph_index ?? 0}`}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-500">
+                                  [{segment.start_offset}..{segment.end_offset}] • {segment.end_offset - segment.start_offset} chars
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
+                              {onAskAboutClause && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAskAboutClause(segment.text);
+                                  }}
+                                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[10px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Analyze this clause in Chat"
+                                >
+                                  <MessageSquare className="w-3 h-3 text-slate-600" />
+                                  <span>Analyze in Chat</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyText(segment);
+                                }}
+                                className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
+                                title="Copy verbatim clause"
+                              >
+                                {copiedSegmentId === segment.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveSegment(null);
+                                }}
+                                className="p-1 text-slate-400 hover:text-slate-700 rounded ml-0.5 cursor-pointer"
+                                title="Close box popup"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2.5">
-                            {document.file_type === "pdf" && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSwitchToOriginal(segment);
-                                }}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-semibold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
-                                title="Highlight in green box on the original document page"
-                              >
-                                <Eye className="w-3 h-3" />
-                                <span>Highlight on Original Page</span>
-                              </button>
-                            )}
-
-                            {onAskAboutClause && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onAskAboutClause(segment.text);
-                                }}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-[10px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                                title="Analyze this clause in Chat"
-                              >
-                                <MessageSquare className="w-3 h-3 text-slate-600" />
-                                <span>Analyze in Chat</span>
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopyText(segment);
-                              }}
-                              className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                              title="Copy verbatim clause"
-                            >
-                              {copiedSegmentId === segment.id ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveSegment(null);
-                              }}
-                              className="p-1 text-slate-400 hover:text-slate-700 rounded ml-0.5 cursor-pointer"
-                              title="Close popover"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {segment.section_title && (
-                        <h4 className="font-bold text-slate-900 mb-1 text-sm tracking-tight flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                          <span>{segment.section_title}</span>
-                        </h4>
-                      )}
-
-                      <p className="text-slate-800 leading-relaxed text-sm whitespace-pre-wrap font-serif">
-                        {displayText}
-                      </p>
-                    </div>
-                  );
-                })
-              )}
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -613,7 +645,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed">
-            Click directly on any clause on the original document! It will highlight in a <strong className="text-emerald-700">green box</strong> right over the text, display its exact character offset indexes <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono">[start..end]</code>, and let you analyze it in Chat without downloading.
+            Click directly on any extracted clause card! It will automatically refer to the original document page and highlight that exact passage in a <strong className="text-emerald-700">green box</strong> with zero downloads.
           </p>
 
           <div className="mt-4 flex justify-end">
