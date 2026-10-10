@@ -4,7 +4,7 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
 
 ---
 
-## 📸 Screenshots of Main Screens
+##  Screenshots of Main Screens
 
 ### 1. Evidence-Grounded Chat & Dynamic Inquiries
 *Ask questions about contracts with streaming responses backed by programmatically verified verbatim source quotes and dynamic inquiries generated specifically from the uploaded document. The Document Viewer tab features a rotating rainbow margin indicator to signal when document processing is complete.*
@@ -34,7 +34,7 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
 
 ---
 
-## 🚀 What the App Does
+##  What the App Does
 
 1. **Document Upload & Multimodal Extraction (Part A)**:
    - Accepts both `.pdf` and `.docx` agreements up to 50MB.
@@ -74,9 +74,9 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
 
 ---
 
-## 📋 What is Finished and What is Not
+##  What is Finished and What is Not
 
-### ✅ What is Finished
+###  What is Finished
 - **Part A: Core Document Q&A Application**:
   - [x] PDF and DOCX upload pipeline with validation and error reporting.
   - [x] Multimodal text extraction with PyMuPDF, `python-docx`, and PaddleOCR fallback.
@@ -105,14 +105,14 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
   - [x] Next.js production build verified (`next build`).
   - [x] Backend deployed live on Render: `https://clausewise-backend-1heh.onrender.com`.
 
-### ⏳ What is Not Finished / Documented Scope
+###  What is Not Finished / Documented Scope
 - **User Authentication**: Deliberately omitted per assignment instructions for a single-user evaluation tool. The system is intended for synthetic or non-confidential contracts.
 - **Part C Option 1 (DOCX Redline Generator)**: Not implemented because **Option 2 (Autonomous Agentic Document Research)** was chosen as the advanced capability.
 - **Dense Vector Search**: The application currently uses `BM25Plus` lexical retrieval with clause-level indexing. Semantic vector search (e.g. Qdrant/pgvector) is documented as a future enhancement.
 
 ---
 
-## 💻 How to Run Locally
+##  How to Run Locally
 
 ### 1. Prerequisites
 - Python 3.11 installed (`py -3.11` or `python3.11`)
@@ -166,7 +166,7 @@ Open **`http://localhost:3000`** in your browser.
 
 ---
 
-## 🧪 Running Automated Tests
+##  Running Automated Tests
 
 ```bash
 # Run all backend unit and integration tests
