@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { DocumentItem } from "@/lib/types";
+import { DocumentItem } from "../lib/types";
 import {
   MessageSquareText,
   FileText,

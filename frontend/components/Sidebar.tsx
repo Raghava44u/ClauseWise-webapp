@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { DocumentItem } from "@/lib/types";
-import { formatBytes } from "@/lib/utils";
+import { DocumentItem } from "../lib/types";
+import { formatBytes } from "../lib/utils";
 import {
   FileText,
   Upload,

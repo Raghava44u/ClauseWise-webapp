@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { DocumentItem } from "@/lib/types";
-import { uploadDocument } from "@/lib/api";
-import { formatBytes } from "@/lib/utils";
+import { DocumentItem } from "../lib/types";
+import { uploadDocument } from "../lib/api";
+import { formatBytes } from "../lib/utils";
 import {
   Upload,
   X,

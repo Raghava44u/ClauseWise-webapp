@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Message, Citation } from "@/lib/types";
+import { Message, Citation } from "../lib/types";
 import {
   Send,
   Square,

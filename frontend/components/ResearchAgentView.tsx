@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { DocumentItem, Citation, AgentRunState } from "@/lib/types";
-import { streamResearch } from "@/lib/api";
+import { DocumentItem, Citation, AgentRunState } from "../lib/types";
+import { streamResearch } from "../lib/api";
 import {
   Sparkles,
   Play,

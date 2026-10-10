@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { DocumentItem, DocumentSegment, Citation, ClauseInfo } from "@/lib/types";
-import { getPageImageUrl, getPageInfo } from "@/lib/api";
+import { DocumentItem, DocumentSegment, Citation, ClauseInfo } from "../lib/types";
+import { getPageImageUrl, getPageInfo } from "../lib/api";
 import {
   Search,
   ChevronLeft,
