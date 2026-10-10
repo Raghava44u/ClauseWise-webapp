@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DocumentItem, ComparisonResponse, Citation } from "@/lib/types";
-import { compareDocuments, createAmendmentDemo } from "@/lib/api";
+import { DocumentItem, ComparisonResponse, Citation } from "../lib/types";
+import { compareDocuments, createAmendmentDemo } from "../lib/api";
 import {
   GitCompare,
   AlertOctagon,

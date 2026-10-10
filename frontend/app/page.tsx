@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sidebar } from "@/components/Sidebar";
-import { Header, ActiveTab } from "@/components/Header";
-import { ChatView } from "@/components/ChatView";
-import { DocumentViewer } from "@/components/DocumentViewer";
-import { ComparisonView } from "@/components/ComparisonView";
-import { ResearchAgentView } from "@/components/ResearchAgentView";
-import { UploadModal } from "@/components/UploadModal";
+import { Sidebar } from "../components/Sidebar";
+import { Header, ActiveTab } from "../components/Header";
+import { ChatView } from "../components/ChatView";
+import { DocumentViewer } from "../components/DocumentViewer";
+import { ComparisonView } from "../components/ComparisonView";
+import { ResearchAgentView } from "../components/ResearchAgentView";
+import { UploadModal } from "../components/UploadModal";
 import {
   DocumentItem,
   DocumentSegment,
@@ -15,7 +15,7 @@ import {
   Message,
   Citation,
   ClauseInfo
-} from "@/lib/types";
+} from "../lib/types";
 import {
   listDocuments,
   getDocument,
@@ -26,7 +26,7 @@ import {
   getConversation,
   deleteDocument,
   streamChat
-} from "@/lib/api";
+} from "../lib/api";
 
 export default function Home() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
