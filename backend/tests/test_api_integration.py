@@ -103,7 +103,15 @@ async def test_create_amendment_demo_and_compare():
         assert comp_data["status"] == "ready"
         assert len(comp_data["items"]) > 0
 
+        # 4. Test dynamic suggested questions
+        q_res = await client.get(f"/api/v1/documents/{base_id}/suggested-questions")
+        assert q_res.status_code == 200
+        q_data = q_res.json()
+        assert "questions" in q_data
+        assert len(q_data["questions"]) >= 3
+
         # Cleanup
         await client.delete(f"/api/v1/documents/{base_id}")
         await client.delete(f"/api/v1/documents/{target_id}")
+
 

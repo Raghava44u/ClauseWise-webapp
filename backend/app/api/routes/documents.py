@@ -275,6 +275,24 @@ async def create_amendment_demo(document_id: str, db: AsyncSession = Depends(get
     processed = await DocumentService.process_document(new_doc_id, db)
     return processed
 
+@router.get("/{document_id}/suggested-questions")
+async def get_document_suggested_questions(document_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Returns dynamically generated, document-specific questions tailored to the uploaded document's actual content.
+    """
+    stmt = select(Document).where(Document.id == document_id)
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    questions = await DocumentService.get_or_generate_suggested_questions(doc, db)
+    return {
+        "document_id": doc.id,
+        "filename": doc.filename,
+        "questions": questions
+    }
+
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, db: AsyncSession = Depends(get_db)):
     """
@@ -284,4 +302,5 @@ async def delete_document(document_id: str, db: AsyncSession = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Document successfully deleted", "id": document_id}
+
 

@@ -50,6 +50,19 @@ export async function getDocumentClauses(id: string): Promise<ClauseInfo[]> {
   return res.json();
 }
 
+export async function getDocumentSuggestedQuestions(documentId: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/documents/${documentId}/suggested-questions`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.questions || [];
+  } catch (e) {
+    console.error("Failed to fetch suggested questions:", e);
+    return [];
+  }
+}
+
+
 export async function uploadDocument(file: File): Promise<DocumentItem> {
   const formData = new FormData();
   formData.append("file", file);

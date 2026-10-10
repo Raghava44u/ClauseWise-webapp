@@ -27,6 +27,8 @@ interface ChatViewProps {
   onCitationClick: (citation: Citation) => void;
   documentTitle?: string;
   isMultiDoc?: boolean;
+  suggestedQuestions?: string[];
+  loadingQuestions?: boolean;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -40,6 +42,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onCitationClick,
   documentTitle,
   isMultiDoc = false,
+  suggestedQuestions = [],
+  loadingQuestions = false,
 }) => {
   const [inputQuery, setInputQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -59,12 +63,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setInputQuery("");
   };
 
-  const samplePrompts = [
-    "What is the limitation of liability cap?",
-    "What are the payment and invoice settlement terms?",
-    "What are the termination for convenience notice requirements?",
-    "Is there an indemnification obligation or penalty clause?"
-  ];
+  // Dynamic questions specific to this uploaded document
+  const displayQuestions = suggestedQuestions.length > 0
+    ? suggestedQuestions
+    : [
+        `What are the core provisions, obligations, and scope outlined in ${documentTitle || "this document"}?`,
+        `What specific conditions, timelines, or performance terms are established?`,
+        `What liabilities, indemnities, or compliance standards apply under this document?`,
+        `What dispute resolution, governing law, or termination clauses are specified?`
+      ];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 text-slate-800 relative overflow-hidden">
@@ -83,22 +90,40 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </p>
 
             <div className="mt-8 w-full space-y-2">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                Suggested Legal Inquiries
-              </p>
-              <div className="grid grid-cols-1 gap-2">
-                {samplePrompts.map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setInputQuery(prompt);
-                    }}
-                    className="text-left text-xs p-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-slate-700 font-medium transition-all shadow-2xs cursor-pointer"
-                  >
-                    "{prompt}"
-                  </button>
-                ))}
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-emerald-600" />
+                  <span>Tailored Inquiries for {documentTitle || "Contract"}</span>
+                </p>
+                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Dynamic Questions
+                </span>
               </div>
+
+              {loadingQuestions ? (
+                <div className="p-5 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-2.5 text-xs text-slate-500 shadow-2xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  <span>Analyzing document to generate tailored questions...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {displayQuestions.map((prompt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        onSendMessage(prompt);
+                      }}
+                      className="text-left text-xs p-3 bg-white hover:bg-emerald-50/40 hover:border-emerald-300 border border-slate-200 rounded-lg text-slate-700 font-medium transition-all shadow-2xs group flex items-start justify-between gap-3 cursor-pointer"
+                      title="Click to submit inquiry"
+                    >
+                      <span className="group-hover:text-slate-900 leading-relaxed font-sans">
+                        "{prompt}"
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 shrink-0 mt-0.5 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (

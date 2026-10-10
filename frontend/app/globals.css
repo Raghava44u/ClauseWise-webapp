@@ -106,3 +106,72 @@ body {
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
   z-index: 30;
 }
+
+/* Rotating Rainbow Border for Document Viewer when Document is Processed */
+@keyframes rotateRainbow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rainbowGlowPulse {
+  0% {
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4), 0 0 12px rgba(59, 130, 246, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 14px rgba(236, 72, 153, 0.5), 0 0 20px rgba(16, 185, 129, 0.4);
+  }
+}
+
+.rainbow-rotating-wrapper {
+  position: relative;
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  animation: rainbowGlowPulse 2.5s ease-in-out infinite alternate;
+}
+
+.rainbow-rotating-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: conic-gradient(
+    #ff0055,
+    #ff7700,
+    #ffd200,
+    #00e676,
+    #00b0ff,
+    #9d00ff,
+    #ff0055
+  );
+  animation: rotateRainbow 2.5s linear infinite;
+  z-index: 0;
+}
+
+.rainbow-rotating-inner {
+  position: relative;
+  z-index: 1;
+  border-radius: calc(0.5rem - 2px);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  transition: all 0.15s ease-in-out;
+}
+
+.rainbow-rotating-inner:hover {
+  background: #f8fafc;
+}
+

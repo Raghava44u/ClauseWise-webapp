@@ -204,3 +204,123 @@ class DocumentService:
         await db.delete(doc)
         await db.commit()
         return True
+
+    @classmethod
+    async def get_or_generate_suggested_questions(cls, doc: Document, db: AsyncSession) -> List[str]:
+        """
+        Retrieves cached dynamic suggested questions or generates 4 tailored questions
+        specifically derived from the document's actual contents, entities, and clauses.
+        """
+        # Check if already cached in summary
+        if doc.summary:
+            try:
+                cached = json.loads(doc.summary)
+                if isinstance(cached, list) and len(cached) >= 3 and all(isinstance(q, str) for q in cached):
+                    return cached
+            except Exception:
+                pass
+
+        # Text excerpt for analysis
+        text_excerpt = (doc.raw_text or "")[:3500].strip()
+        filename = doc.filename or "Uploaded Document"
+
+        # Try AI generation first
+        from backend.app.services.grok_service import GrokService
+        try:
+            prompt = (
+                f"You are an expert legal and document intelligence analyst. "
+                f"Review the following text excerpt from the uploaded document '{filename}'. "
+                f"Generate exactly 4 insightful, specific, dynamic questions that a user or reviewer would want to ask about THIS SPECIFIC document. "
+                f"Each question must directly relate to the specific content, entities, role, skills, terms, clauses, or details present in this document "
+                f"(do NOT use generic boilerplate questions like 'limitation of liability' unless the document actually has a liability clause).\n\n"
+                f"Document excerpt:\n{text_excerpt}\n\n"
+                f"Respond with a JSON array of exactly 4 strings, e.g. [\"question 1\", \"question 2\", \"question 3\", \"question 4\"]. Only output valid JSON without any markdown formatting."
+            )
+
+            res = await GrokService.chat_completion(
+                [{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=600
+            )
+
+            content = res.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            # Clean possible markdown formatting
+            if content.startswith("```"):
+                lines = content.splitlines()
+                content = "\n".join([line for line in lines if not line.strip().startswith("```")]).strip()
+
+            parsed = json.loads(content)
+            if isinstance(parsed, list) and len(parsed) >= 3:
+                clean_qs = [str(q).strip().strip('"').strip("'") for q in parsed[:4] if str(q).strip()]
+                if len(clean_qs) >= 3:
+                    doc.summary = json.dumps(clean_qs)
+                    await db.commit()
+                    return clean_qs
+        except Exception as ai_err:
+            logger.warning(f"AI question generation failed for doc {doc.id}, falling back to content analyzer: {ai_err}")
+
+        # Fallback: Content-aware dynamic questions
+        lower_text = text_excerpt.lower()
+        lower_filename = filename.lower()
+        questions = []
+
+        is_profile = any(k in lower_text or k in lower_filename for k in [
+            "profile", "resume", "curriculum", "skills", "experience", "education",
+            "developer", "engineer", "intern", "hugging face", "github", "linkedin", "operations"
+        ])
+        is_nda = any(k in lower_text or k in lower_filename for k in [
+            "non-disclosure", "nda", "confidentiality", "proprietary information", "disclosing party"
+        ])
+        is_amendment = any(k in lower_text or k in lower_filename for k in [
+            "amendment", "addendum", "modification", "amended and restated"
+        ])
+
+        if is_profile:
+            questions = [
+                f"What are the core operational skills, technical proficiencies, and tools documented in '{filename}'?",
+                "What specific professional responsibilities and data integrity workflows are highlighted?",
+                "What educational background, academic achievements, and degrees are listed?",
+                "What key projects, benchmark audits, and case studies are detailed?"
+            ]
+        elif is_nda:
+            questions = [
+                "What specific categories of data and materials are classified as Confidential Information?",
+                "What are the receiving party's non-disclosure obligations and permitted exceptions?",
+                "What is the duration of the confidentiality obligations and post-termination survival period?",
+                "What remedies, injunctive relief, and governing jurisdiction are specified?"
+            ]
+        elif is_amendment:
+            questions = [
+                "What original agreement provisions or sections are modified by this amendment?",
+                "What are the revised terms, effective dates, or financial adjustments introduced?",
+                "How does this amendment impact liabilities, warranties, or termination clauses?",
+                "What conditions precedent or signatures are required for execution?"
+            ]
+        else:
+            # Check segments for actual clause titles
+            stmt = select(DocumentSegment).where(
+                DocumentSegment.document_id == doc.id,
+                DocumentSegment.section_title.isnot(None)
+            ).limit(10)
+            seg_res = await db.execute(stmt)
+            titles = [s.section_title for s in seg_res.scalars().all() if s.section_title and len(s.section_title) > 3]
+            titles = list(dict.fromkeys(titles))  # deduplicate preserving order
+
+            if len(titles) >= 4:
+                questions = [f"What specific terms and obligations are outlined under '{t}'?" for t in titles[:4]]
+            else:
+                questions = [
+                    f"What are the primary rights, duties, and core obligations established in '{filename}'?",
+                    "What are the financial, compensation, or payment settlement conditions?",
+                    "What are the termination requirements, notice periods, and breach provisions?",
+                    "How are liabilities, warranties, and dispute resolution governed in this contract?"
+                ]
+
+        doc.summary = json.dumps(questions)
+        try:
+            await db.commit()
+        except Exception:
+            pass
+
+        return questions
+

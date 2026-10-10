@@ -93,17 +93,37 @@ export const Header: React.FC<HeaderProps> = ({
           <span>Chat</span>
         </button>
 
-        <button
-          onClick={() => onTabChange("viewer")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
-            activeTab === "viewer"
-              ? "bg-white text-slate-900 font-semibold shadow-xs"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Document Viewer</span>
-        </button>
+        {/* Document Viewer Tab with Rotating Rainbow Border when Processed */}
+        {activeDoc?.status === "ready" ? (
+          <div className="rainbow-rotating-wrapper" title="Document processed and ready for interactive viewing!">
+            <button
+              onClick={() => onTabChange("viewer")}
+              className={`rainbow-rotating-inner cursor-pointer ${
+                activeTab === "viewer"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "bg-slate-50 text-slate-800 hover:bg-white"
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Document Viewer</span>
+              <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full uppercase tracking-wider ml-0.5 animate-pulse">
+                Ready
+              </span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => onTabChange("viewer")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
+              activeTab === "viewer"
+                ? "bg-white text-slate-900 font-semibold shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Document Viewer</span>
+          </button>
+        )}
 
         <button
           onClick={() => onTabChange("compare")}

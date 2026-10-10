@@ -20,6 +20,7 @@ import {
   listDocuments,
   getDocument,
   getDocumentClauses,
+  getDocumentSuggestedQuestions,
   createConversation,
   getDocumentConversations,
   getConversation,
@@ -42,6 +43,10 @@ export default function Home() {
   // Document details
   const [segments, setSegments] = useState<DocumentSegment[]>([]);
   const [clauses, setClauses] = useState<ClauseInfo[]>([]);
+
+  // Dynamic suggested questions for uploaded document
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState<boolean>(false);
 
   // Chat & streaming state
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
@@ -102,6 +107,13 @@ export default function Home() {
         setActiveConversation(newConv);
         setMessages([]);
       }
+
+      // Fetch dynamic questions tailored to this document
+      setLoadingQuestions(true);
+      getDocumentSuggestedQuestions(docId)
+        .then((qs) => setSuggestedQuestions(qs))
+        .catch(() => setSuggestedQuestions([]))
+        .finally(() => setLoadingQuestions(false));
     } catch (err) {
       console.error("Failed to load document details:", err);
     }
@@ -127,6 +139,7 @@ export default function Home() {
           setSegments([]);
           setClauses([]);
           setMessages([]);
+          setSuggestedQuestions([]);
         }
       }
     } catch (err) {
@@ -279,6 +292,8 @@ export default function Home() {
               onCitationClick={handleCitationClick}
               documentTitle={activeDoc?.filename}
               isMultiDoc={isMultiSelectMode && multiSelectIds.length > 1}
+              suggestedQuestions={suggestedQuestions}
+              loadingQuestions={loadingQuestions}
             />
           )}
 
