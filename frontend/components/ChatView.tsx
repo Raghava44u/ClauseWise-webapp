@@ -275,7 +275,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
                 <span className="text-[10px] text-emerald-700 mt-1.5 px-1 flex items-center gap-1 font-mono">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                  <span>Streaming from Gemini 2.5 Flash...</span>
+                  <span>Streaming from Gemini 3.5 Flash...</span>
                 </span>
               </div>
             )}

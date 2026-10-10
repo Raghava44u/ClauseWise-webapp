@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "gemini"
     AI_API_KEY: str = ""
     AI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
-    AI_MODEL: str = "gemini-2.5-flash-lite"
+    AI_MODEL: str = "gemini-3.5-flash-lite"
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./clausewise.db"
     

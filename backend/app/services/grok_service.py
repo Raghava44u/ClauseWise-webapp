@@ -46,11 +46,14 @@ class GrokService:
         configured = (settings.AI_MODEL or os.environ.get("AI_MODEL", "")).strip()
         if settings.AI_PROVIDER.lower() == "gemini":
             candidates = [
-                configured or "gemini-2.5-flash-lite",
+                # Ultra-fast, high-quota models first for instantaneous sub-second responses:
+                "gemini-3.5-flash-lite",
+                "gemini-3.5-flash",
+                "gemini-3-flash-preview",
+                "gemini-flash-lite-latest",
+                configured or "gemini-3.5-flash-lite",
                 "gemini-2.5-flash-lite",
-                "gemini-flash-latest",
-                "gemini-2.5-flash",
-                "gemini-2.5-pro"
+                "gemini-2.5-flash"
             ]
         else:
             candidates = [
@@ -83,11 +86,11 @@ class GrokService:
         tool_choice: Optional[Any] = None,
         temperature: float = 0.2,
         max_tokens: int = 4096,
-        timeout: float = 60.0
+        timeout: float = 25.0
     ) -> Dict[str, Any]:
         """
         Sends a standard non-streaming chat completion request to the AI provider.
-        Automatically falls back across viable models if 429 or quota limit is encountered.
+        Automatically falls back across viable models if 429, 503, or quota limits are encountered.
         """
         cls.validate_configuration()
         api_key = cls.get_api_key()
@@ -116,9 +119,9 @@ class GrokService:
             try:
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     response = await client.post(url, json=payload, headers=headers)
-                    if response.status_code == 429:
-                        logger.warning(f"Model {model} hit 429 Rate Limit. Trying next candidate model...")
-                        last_error = GrokAPIError(f"Rate limit exceeded on {model}.", status_code=429)
+                    if response.status_code in (429, 502, 503, 504):
+                        logger.warning(f"Model {model} returned status {response.status_code}. Retrying with next candidate...")
+                        last_error = GrokAPIError(f"Model {model} temporarily unavailable ({response.status_code}).", status_code=response.status_code)
                         continue
                     elif response.status_code == 401:
                         raise GrokAPIError("Authentication failed: Invalid API key.", status_code=401)
@@ -129,18 +132,20 @@ class GrokService:
                             err_msg = err_json.get("error", {}).get("message", err_msg)
                         except Exception:
                             pass
-                        # If resource exhausted or quota error, try next candidate
-                        if "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
-                            logger.warning(f"Model {model} exhausted quota: {err_msg}. Trying fallback...")
-                            last_error = GrokAPIError(f"Quota exhausted on {model}: {err_msg}", status_code=response.status_code)
+                        # If resource exhausted, high demand, or quota error, try next candidate
+                        if any(phrase in err_msg.lower() for phrase in ["resource_exhausted", "quota", "demand", "overloaded", "unavailable"]):
+                            logger.warning(f"Model {model} unavailable ({err_msg}). Trying fallback...")
+                            last_error = GrokAPIError(f"Model {model} unavailable: {err_msg}", status_code=response.status_code)
                             continue
                         raise GrokAPIError(f"API Error ({response.status_code}): {err_msg}", status_code=response.status_code)
 
                     return response.json()
             except httpx.TimeoutException:
+                logger.warning(f"Request to model {model} timed out. Trying next candidate...")
                 last_error = GrokAPIError(f"Request to {model} timed out.", status_code=504)
                 continue
             except httpx.RequestError as e:
+                logger.warning(f"Network error communicating with {model}: {e}. Trying next candidate...")
                 last_error = GrokAPIError(f"Network error with {model}: {e}")
                 continue
 
@@ -156,11 +161,11 @@ class GrokService:
         tool_choice: Optional[Any] = None,
         temperature: float = 0.2,
         max_tokens: int = 4096,
-        timeout: float = 90.0
+        timeout: float = 30.0
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Streams chat completions from the AI API over Server-Sent Events.
-        Automatically retries with fallback candidate models if 429 quota exhaustion occurs.
+        Automatically retries with fallback candidate models if 429, 503, or transient failures occur.
         """
         cls.validate_configuration()
         api_key = cls.get_api_key()
@@ -191,18 +196,18 @@ class GrokService:
             try:
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     async with client.stream("POST", url, json=payload, headers=headers) as response:
-                        if response.status_code == 429:
-                            logger.warning(f"Streaming: Model {model} hit 429 Rate Limit. Trying next candidate...")
-                            last_error = GrokAPIError(f"Rate limit exceeded on {model}.", status_code=429)
+                        if response.status_code in (429, 502, 503, 504):
+                            logger.warning(f"Streaming: Model {model} returned {response.status_code}. Retrying with next candidate...")
+                            last_error = GrokAPIError(f"Model {model} temporarily unavailable ({response.status_code}).", status_code=response.status_code)
                             continue
                         elif response.status_code == 401:
                             raise GrokAPIError("Authentication failed: Invalid API key.", status_code=401)
                         elif response.status_code >= 400:
                             body = await response.aread()
                             err_text = body.decode(errors="ignore")
-                            if "RESOURCE_EXHAUSTED" in err_text or "quota" in err_text.lower():
-                                logger.warning(f"Streaming: Model {model} quota exhausted. Trying next candidate...")
-                                last_error = GrokAPIError(f"Quota exhausted on {model}.", status_code=response.status_code)
+                            if any(phrase in err_text.lower() for phrase in ["resource_exhausted", "quota", "demand", "overloaded", "unavailable"]):
+                                logger.warning(f"Streaming: Model {model} unavailable ({err_text}). Retrying with next candidate...")
+                                last_error = GrokAPIError(f"Model {model} unavailable.", status_code=response.status_code)
                                 continue
                             raise GrokAPIError(f"API Error ({response.status_code}): {err_text}", status_code=response.status_code)
 
@@ -238,9 +243,11 @@ class GrokService:
             except GrokAPIError:
                 raise
             except httpx.TimeoutException:
+                logger.warning(f"Streaming from model {model} timed out. Retrying with next candidate...")
                 last_error = GrokAPIError(f"Streaming request to {model} timed out.", status_code=504)
                 continue
             except httpx.RequestError as e:
+                logger.warning(f"Streaming network error with {model}: {e}. Retrying with next candidate...")
                 last_error = GrokAPIError(f"Streaming network error with {model}: {e}")
                 continue
 
