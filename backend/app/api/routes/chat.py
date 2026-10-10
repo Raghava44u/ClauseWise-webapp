@@ -136,7 +136,8 @@ async def stream_chat(
             "4. If multiple documents are included in the excerpts, synthesize evidence across ALL of them, comparing and contrasting their provisions, and clearly attribute each finding to its originating document (e.g., [Document: filename]).\n"
             "5. If the provided excerpts genuinely lack information on the topic after exhaustive review, state clearly: "
             "'Based on the contract text, there is no provision or insufficient evidence regarding this topic.'\n"
-            "6. Never claim you cannot read or access PDF files or external documents; the text has already been parsed and provided to you below.\n\n"
+            "6. Never claim you cannot read or access PDF files or external documents; the text has already been parsed and provided to you below.\n"
+            "7. Arabic Language & RTL Support: If the user queries in Arabic or the document is in Arabic, respond in fluent, professional Modern Standard Arabic (العربية الفصحى). Enclose verbatim Arabic source quotations in double quotes (\"...\") and preserve original Arabic contract terminology.\n\n"
             f"--- RELEVANT DOCUMENT EXCERPTS ---\n{context_text}\n--- END EXCERPTS ---"
         )
 

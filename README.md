@@ -72,6 +72,16 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
    - Real-time execution console displaying live tool calls, arguments, and intermediate findings.
    - Guardrails enforcing a strict 6-round execution ceiling and robust parameter validation.
 
+8. **Voice Input & Hands-Free Inquiry**:
+   - Integrated Web Speech API microphone interface directly in the chat bar.
+   - Live listening pulse indicator with one-touch language switching between English (`en-US`) and Arabic (`ar-SA`).
+   - Hands-free dictation automatically fills the inquiry box and streams responses with zero external dependencies.
+
+9. **Arabic Support & Dynamic RTL (Right-to-Left) Layout**:
+   - Arabic legal contract parsing detecting standard Arabic headings (`المادة`, `البند`, `القسم`, `الفصل`, `تمهيد`).
+   - Quote verification engine normalizes Arabic tatweel (`ـ`), tashkeel diacritics, bidi marks, and Arabic quotation marks (`« »`).
+   - Adaptive RTL layout (`dir="rtl"`) automatically activates across chat message bubbles, streaming tokens, source citations, and document viewer panels whenever Arabic text is detected.
+
 ---
 
 ##  What is Finished and What is Not
@@ -93,6 +103,8 @@ ClauseWise is a legal contract analysis web application engineered to parse, ind
   - [x] Automated contract version comparison with numeric change detection and significance scoring.
   - [x] Rotating rainbow margin indicator on Document Viewer tab when processing completes.
   - [x] Dynamic, document-tailored suggested questions generated from uploaded content.
+  - [x] Voice input via Web Speech API with live pulse indicator and English/Arabic toggle.
+  - [x] Arabic language extraction, tashkeel/tatweel quote normalization, and dynamic RTL layout.
 
 - **Part C: Advanced Capability (Option 2 Selected)**:
   - [x] Autonomous agentic research with 4 model-callable tools.

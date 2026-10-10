@@ -17,12 +17,18 @@ class CitationService:
         norm_chars = []
         orig_indices = []
         
-        # Replacement dictionary for unicode typographic variants
+        # Replacement dictionary for unicode typographic variants (including Arabic quotes, tatweel, and marks)
         char_replacements = {
             '\u2018': "'", '\u2019': "'", '\u201a': "'", '\u201b': "'",
             '\u201c': '"', '\u201d': '"', '\u201e': '"', '\u201f': '"',
+            '\u00ab': '"', '\u00bb': '"',  # Arabic / French quotes « »
             '\u2013': '-', '\u2014': '-', '\u2212': '-',
             '\u00a0': ' ', '\u200b': '', '\u00ad': '',  # non-breaking space, zero-width space, soft-hyphen
+            '\u200e': '', '\u200f': '', '\u061c': '',  # LRM, RLM, ALM bidi marks
+            '\u0640': '',  # Arabic tatweel / kashida elongation dash
+            # Arabic tashkeel (diacritics: fatha, damma, kasra, shadda, sukun, tanween, dagger alif)
+            '\u064b': '', '\u064c': '', '\u064d': '', '\u064e': '', '\u064f': '',
+            '\u0650': '', '\u0651': '', '\u0652': '', '\u0670': '',
         }
 
         prev_is_space = True  # start true to strip leading whitespace

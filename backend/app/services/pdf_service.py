@@ -64,7 +64,10 @@ class PDFService:
                 is_heading = False
                 lines = block_text.splitlines()
                 first_line = lines[0].strip() if lines else ""
-                if len(first_line) < 80 and (first_line.isupper() or any(first_line.startswith(prefix) for prefix in ["Section", "Clause", "Article", "1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."])):
+                arabic_prefixes = ["المادة", "البند", "القسم", "الفصل", "تمهيد", "مقدمة", "١.", "٢.", "٣.", "٤.", "٥."]
+                latin_prefixes = ["Section", "Clause", "Article", "1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
+                all_prefixes = latin_prefixes + arabic_prefixes
+                if len(first_line) < 80 and (first_line.isupper() or any(first_line.startswith(prefix) for prefix in all_prefixes)):
                     is_heading = True
 
                 segment_start = raw_offset + len("\n\n".join(page_text_parts) + ("\n\n" if page_text_parts else ""))

@@ -90,16 +90,19 @@ class RetrievalService:
             if len(selected_segments) >= top_k:
                 break
 
-        # Overview / general intent query terms (e.g. "what is this about?", "what does that pdf tells about?", "what is his name?", "who is this?")
+        # Overview / general intent query terms (English & Arabic)
         overview_terms = {
             "what", "who", "tell", "tells", "about", "all", "summary", "summarize",
             "overview", "explain", "describe", "pdf", "document", "name", "title",
-            "subject", "parties", "party", "person", "purpose", "scope", "main", "content"
+            "subject", "parties", "party", "person", "purpose", "scope", "main", "content",
+            # Arabic overview terms
+            "ما", "ماذا", "من", "عن", "ملخص", "تلخيص", "المستند", "العقد", "الاسم", "اسم",
+            "الاطراف", "الطرفين", "الشروط", "الموضوع", "موضوع", "الملف", "نبذة", "بيان", "محتوى"
         }
         is_overview_query = any(t in overview_terms for t in query_tokens)
 
-        # Fallback: if no specific keyword matches were found, OR if this is an overview query needing context
-        if not selected_segments or (is_overview_query and len(selected_segments) < top_k):
+        # Fallback: only if this is an overview query needing context (e.g. "what is this document about?")
+        if is_overview_query and len(selected_segments) < top_k:
             # Collect representative segments from document start (title, preamble, recitals, intro)
             existing_ids = {s.get("id") for s in selected_segments}
             for seg in segments:

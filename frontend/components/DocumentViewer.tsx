@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Sparkles
 } from "lucide-react";
+import { isArabicText } from "../lib/utils";
 
 interface DocumentViewerProps {
   document: DocumentItem | null;
@@ -280,7 +281,12 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <span className="font-bold shrink-0">
               Cited Passage (Page {highlightCitation.page_number || currentPage}):
             </span>
-            <span className="italic truncate text-slate-700">
+            <span
+              dir={isArabicText(highlightCitation.quote) ? "rtl" : "ltr"}
+              className={`italic truncate text-slate-700 ${
+                isArabicText(highlightCitation.quote) ? "text-right" : ""
+              }`}
+            >
               "{highlightCitation.quote}"
             </span>
           </div>
@@ -304,29 +310,35 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             {clauses.length === 0 ? (
               <p className="text-xs text-slate-400 italic p-2">No clause headings indexed.</p>
             ) : (
-              clauses.map((clause, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    if (clause.page_number) setCurrentPage(clause.page_number);
-                    const match = segments.find(
-                      (s) =>
-                        (s.page_number === clause.page_number &&
-                          s.section_title?.toLowerCase() === clause.title.toLowerCase()) ||
-                        (s.start_offset <= clause.start_offset && s.end_offset >= clause.start_offset)
-                    );
-                    if (match) handleSelectSegment(match);
-                  }}
-                  className="text-left p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 group cursor-pointer"
-                >
-                  <p className="text-xs font-medium text-slate-700 truncate group-hover:text-slate-900">
-                    {clause.title}
-                  </p>
-                  <span className="text-[10px] text-slate-400 mt-0.5 block font-mono">
-                    Page {clause.page_number || 1}
-                  </span>
-                </button>
-              ))
+              clauses.map((clause, idx) => {
+                const isArClause = isArabicText(clause.title);
+                return (
+                  <button
+                    key={idx}
+                    dir={isArClause ? "rtl" : "ltr"}
+                    onClick={() => {
+                      if (clause.page_number) setCurrentPage(clause.page_number);
+                      const match = segments.find(
+                        (s) =>
+                          (s.page_number === clause.page_number &&
+                            s.section_title?.toLowerCase() === clause.title.toLowerCase()) ||
+                          (s.start_offset <= clause.start_offset && s.end_offset >= clause.start_offset)
+                      );
+                      if (match) handleSelectSegment(match);
+                    }}
+                    className={`text-left p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 group cursor-pointer ${
+                      isArClause ? "text-right" : ""
+                    }`}
+                  >
+                    <p className="text-xs font-medium text-slate-700 truncate group-hover:text-slate-900">
+                      {clause.title}
+                    </p>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block font-mono">
+                      Page {clause.page_number || 1}
+                    </span>
+                  </button>
+                );
+              })
             )}
           </aside>
         )}
@@ -366,6 +378,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 ) : (
                   pageSegments.map((segment) => {
                     const isActive = activeSegment?.id === segment.id;
+                    const isArText = isArabicText(segment.text);
+                    const isArHeader = isArabicText(segment.section_title);
 
                     // In-doc search highlight
                     let displayText: React.ReactNode = segment.text;
@@ -404,9 +418,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                               }`}
                             />
                             <h4
+                              dir={isArHeader ? "rtl" : "ltr"}
                               className={`text-xs font-bold truncate ${
                                 isActive ? "text-emerald-900" : "text-slate-800"
-                              }`}
+                              } ${isArHeader ? "text-right" : ""}`}
                             >
                               {segment.section_title || `Clause Block #${segment.paragraph_index ?? 0}`}
                             </h4>
@@ -424,7 +439,12 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         </div>
 
                         {/* Extracted Text Body */}
-                        <p className="text-xs leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
+                        <p
+                          dir={isArText ? "rtl" : "ltr"}
+                          className={`text-xs leading-relaxed text-slate-700 font-serif whitespace-pre-wrap ${
+                            isArText ? "text-right" : ""
+                          }`}
+                        >
                           {displayText}
                         </p>
 

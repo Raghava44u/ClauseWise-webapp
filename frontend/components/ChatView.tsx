@@ -14,8 +14,11 @@ import {
   Bot,
   User,
   ArrowUpRight,
-  Layers
+  Layers,
+  Mic,
+  MicOff
 } from "lucide-react";
+import { isArabicText } from "../lib/utils";
 
 interface ChatViewProps {
   messages: Message[];
@@ -54,6 +57,77 @@ export const ChatView: React.FC<ChatViewProps> = ({
 }) => {
   const [inputQuery, setInputQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Voice Input State (Speech Recognition API)
+  const [isListening, setIsListening] = useState(false);
+  const [speechLang, setSpeechLang] = useState<"en-US" | "ar-SA">("en-US");
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+      }
+    }
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (typeof window === "undefined") return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice input is supported in Google Chrome, Microsoft Edge, and Safari browsers.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = speechLang;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setInputQuery(transcript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("Speech recognition error:", event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Speech recognition startup error:", err);
+      setIsListening(false);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -135,126 +209,145 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${
-                  msg.role === "user" ? "items-end" : "items-start"
-                }`}
-              >
-                {/* Message Bubble */}
+            {messages.map((msg) => {
+              const isArabicMsg = isArabicText(msg.content);
+              return (
                 <div
-                  className={`max-w-3xl rounded-xl p-4 sm:p-5 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-slate-900 text-white font-medium rounded-br-xs shadow-xs"
-                      : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs shadow-xs"
+                  key={msg.id}
+                  className={`flex flex-col ${
+                    msg.role === "user" ? "items-end" : "items-start"
                   }`}
                 >
-                  {msg.content.startsWith("⚠️") ? (
-                    <div className="text-xs text-rose-800 flex items-start gap-2 font-medium bg-rose-50 p-3 rounded-lg border border-rose-200">
-                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <span>{msg.content.replace(/^⚠️\s*/, "")}</span>
-                    </div>
-                  ) : (
-                    <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
-                  )}
-
-                  {msg.is_interrupted && !msg.content.startsWith("⚠️") && (
-                    <div className="mt-3 text-xs text-amber-800 flex items-center gap-1.5 font-medium bg-amber-50 p-2 rounded-lg border border-amber-200">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Generation stopped by user. Partial analysis preserved.</span>
-                    </div>
-                  )}
-
-                  {/* Verified Citations List */}
-                  {msg.citations && msg.citations.length > 0 && (
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-                        <span className="flex items-center gap-1.5 text-emerald-700">
-                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                          <span>Supporting Source Citations ({msg.citations.length})</span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          Click quote to view passage
-                        </span>
+                  {/* Message Bubble */}
+                  <div
+                    dir={isArabicMsg ? "rtl" : "ltr"}
+                    className={`max-w-3xl rounded-xl p-4 sm:p-5 text-sm leading-relaxed ${
+                      isArabicMsg ? "text-right font-sans" : ""
+                    } ${
+                      msg.role === "user"
+                        ? "bg-slate-900 text-white font-medium rounded-br-xs shadow-xs"
+                        : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs shadow-xs"
+                    }`}
+                  >
+                    {msg.content.startsWith("⚠️") ? (
+                      <div className="text-xs text-rose-800 flex items-start gap-2 font-medium bg-rose-50 p-3 rounded-lg border border-rose-200">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <span>{msg.content.replace(/^⚠️\s*/, "")}</span>
                       </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                    )}
 
-                      <div className="grid grid-cols-1 gap-2 mt-2">
-                        {msg.citations.map((cite, cIdx) => (
-                          <div
-                            key={cIdx}
-                            onClick={() => onCitationClick(cite)}
-                            className={`p-3 rounded-lg border text-xs cursor-pointer transition-all ${
-                              cite.verified
-                                ? "bg-emerald-50/50 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
-                                : "bg-amber-50/50 border-amber-200 hover:bg-amber-50"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="font-semibold text-slate-700 flex items-center gap-1.5 truncate max-w-xs">
-                                <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="truncate">{cite.document_title}</span>
-                                {cite.page_number && (
-                                  <span className="text-[10px] text-slate-500 font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                                    P.{cite.page_number}
+                    {msg.is_interrupted && !msg.content.startsWith("⚠️") && (
+                      <div className="mt-3 text-xs text-amber-800 flex items-center gap-1.5 font-medium bg-amber-50 p-2 rounded-lg border border-amber-200">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Generation stopped by user. Partial analysis preserved.</span>
+                      </div>
+                    )}
+
+                    {/* Verified Citations List */}
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                          <span className="flex items-center gap-1.5 text-emerald-700">
+                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                            <span>Supporting Source Citations ({msg.citations.length})</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            Click quote to view passage
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 mt-2">
+                          {msg.citations.map((cite, cIdx) => {
+                            const isArabicQuote = isArabicText(cite.quote);
+                            return (
+                              <div
+                                key={cIdx}
+                                onClick={() => onCitationClick(cite)}
+                                className={`p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                                  cite.verified
+                                    ? "bg-emerald-50/50 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
+                                    : "bg-amber-50/50 border-amber-200 hover:bg-amber-50"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="font-semibold text-slate-700 flex items-center gap-1.5 truncate max-w-xs">
+                                    <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span className="truncate">{cite.document_title}</span>
+                                    {cite.page_number && (
+                                      <span className="text-[10px] text-slate-500 font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                                        P.{cite.page_number}
+                                      </span>
+                                    )}
                                   </span>
-                                )}
-                              </span>
-                              {cite.verified ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3 text-emerald-600" />
-                                  <span>100% Verbatim Match</span>
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 flex items-center gap-1">
-                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                  <span>Unverified Quote</span>
-                                </span>
-                              )}
-                            </div>
+                                  {cite.verified ? (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>100% Verbatim Match</span>
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 flex items-center gap-1">
+                                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                                      <span>Unverified Quote</span>
+                                    </span>
+                                  )}
+                                </div>
 
-                            <p className="text-slate-800 italic font-serif leading-relaxed line-clamp-3">
-                              "{cite.quote}"
-                            </p>
+                                <p
+                                  dir={isArabicQuote ? "rtl" : "ltr"}
+                                  className={`text-slate-800 italic font-serif leading-relaxed line-clamp-3 ${
+                                    isArabicQuote ? "text-right" : ""
+                                  }`}
+                                >
+                                  "{cite.quote}"
+                                </p>
 
-                            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono pt-1 border-t border-emerald-100">
-                              <span>
-                                {cite.start_offset !== undefined && cite.end_offset !== undefined
-                                  ? `Offsets: [${cite.start_offset} — ${cite.end_offset}]`
-                                  : "Exact Source Matched"}
-                              </span>
-                              <span className="flex items-center gap-0.5 text-emerald-700 hover:underline">
-                                <span>Inspect Source</span>
-                                <ArrowUpRight className="w-3 h-3" />
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono pt-1 border-t border-emerald-100">
+                                  <span>
+                                    {cite.start_offset !== undefined && cite.end_offset !== undefined
+                                      ? `Offsets: [${cite.start_offset} — ${cite.end_offset}]`
+                                      : "Exact Source Matched"}
+                                  </span>
+                                  <span className="flex items-center gap-0.5 text-emerald-700 hover:underline">
+                                    <span>Inspect Source</span>
+                                    <ArrowUpRight className="w-3.5 h-3.5" />
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1.5 px-1 font-mono">
-                  {msg.role === "user" ? (
-                    <>
-                      <User className="w-3 h-3 text-slate-400" />
-                      <span>Counsel</span>
-                    </>
-                  ) : (
-                    <>
-                      <Bot className="w-3 h-3 text-emerald-600" />
-                      <span>ClauseWise AI</span>
-                    </>
-                  )}
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1.5 px-1 font-mono">
+                    {msg.role === "user" ? (
+                      <>
+                        <User className="w-3 h-3 text-slate-400" />
+                        <span>Counsel</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="w-3 h-3 text-emerald-600" />
+                        <span>ClauseWise AI</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Currently Streaming Assistant Bubble */}
             {isStreaming && (
               <div className="flex flex-col items-start">
-                <div className="max-w-3xl rounded-xl p-5 text-sm leading-relaxed bg-white text-slate-800 border border-slate-200 shadow-xs rounded-bl-xs">
+                <div
+                  dir={isArabicText(streamingToken) ? "rtl" : "ltr"}
+                  className={`max-w-3xl rounded-xl p-5 text-sm leading-relaxed bg-white text-slate-800 border border-slate-200 shadow-xs rounded-bl-xs ${
+                    isArabicText(streamingToken) ? "text-right font-sans" : ""
+                  }`}
+                >
                   {streamingStatus && (
                     <div className="mb-3 text-xs text-slate-700 flex items-center gap-2 font-medium bg-slate-50 p-2 rounded-lg border border-slate-200">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
@@ -334,20 +427,96 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         )}
 
+        {/* Voice Input Listening Pulse Banner */}
+        {isListening && (
+          <div className="mb-2 max-w-4xl mx-auto flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 animate-pulse">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping" />
+              <span className="font-semibold">
+                {speechLang === "ar-SA"
+                  ? "🎙️ استمع إلى سؤالك (تحدث الآن)..."
+                  : "🎙️ Listening to your question (Speak now)..."}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              className="text-[11px] font-bold text-emerald-900 bg-emerald-200/70 hover:bg-emerald-300 px-2 py-0.5 rounded cursor-pointer transition-colors"
+            >
+              {speechLang === "ar-SA" ? "إيقاف" : "Stop"}
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="relative flex items-center gap-2 max-w-4xl mx-auto">
+          {/* Speech Language Switcher */}
+          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs shrink-0">
+            <button
+              type="button"
+              onClick={() => setSpeechLang("en-US")}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                speechLang === "en-US"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Voice input in English"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setSpeechLang("ar-SA")}
+              className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                speechLang === "ar-SA"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Voice input in Arabic (العربية)"
+            >
+              العربية
+            </button>
+          </div>
+
+          {/* Voice Input Mic Button */}
+          <button
+            type="button"
+            onClick={toggleVoiceInput}
+            className={`p-2.5 rounded-lg border text-xs font-medium transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+              isListening
+                ? "bg-rose-500 border-rose-600 text-white animate-pulse shadow-md"
+                : "bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border-slate-200 hover:border-emerald-300"
+            }`}
+            title={
+              isListening
+                ? "Click to stop listening"
+                : `Click to speak your question (${speechLang === "ar-SA" ? "العربية" : "English"})`
+            }
+          >
+            {isListening ? (
+              <MicOff className="w-4 h-4 text-white" />
+            ) : (
+              <Mic className="w-4 h-4 text-slate-600 group-hover:text-emerald-700" />
+            )}
+          </button>
+
           <input
             type="text"
+            dir={isArabicText(inputQuery) ? "rtl" : "ltr"}
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
             placeholder={
-              queryScope === "all"
-                ? `Ask anything across all ${allDocumentsCount} documents (e.g. compare terms, what do they say, who are they)...`
+              speechLang === "ar-SA"
+                ? "اسأل أي سؤال عن العقد أو اضغط على الميكروفون للتحدث..."
+                : queryScope === "all"
+                ? `Ask anything across all ${allDocumentsCount} documents (or speak via mic)...`
                 : isMultiDoc
-                ? "Ask a question comparing selected contracts..."
-                : `Ask anything about ${documentTitle || "this document"} (e.g. what does it tell about, what is his name, liabilities)...`
+                ? "Ask a question comparing selected contracts (or speak via mic)..."
+                : `Ask anything about ${documentTitle || "this document"} (or speak via mic)...`
             }
             disabled={isStreaming}
-            className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white text-slate-900 placeholder-slate-400 disabled:opacity-50 transition-all font-sans shadow-2xs"
+            className={`flex-1 px-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white text-slate-900 placeholder-slate-400 disabled:opacity-50 transition-all font-sans shadow-2xs ${
+              isArabicText(inputQuery) ? "text-right" : ""
+            }`}
           />
 
           {isStreaming ? (
